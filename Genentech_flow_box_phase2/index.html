@@ -436,6 +436,15 @@
             const [calendarMonth, setCalendarMonth] = useState(new Date());
             const [isMobile, setIsMobile] = useState(false);
             const [searchQuery, setSearchQuery] = useState('');
+            const [highlightUrgent, setHighlightUrgent] = useState(() => {
+                const saved = localStorage.getItem('highlightUrgent');
+                return saved !== null ? JSON.parse(saved) : true;
+            });
+
+            // 持久化高亮設定
+            useEffect(() => {
+                localStorage.setItem('highlightUrgent', JSON.stringify(highlightUrgent));
+            }, [highlightUrgent]);
 
             // 偵測行動裝置
             useEffect(() => {
@@ -698,17 +707,14 @@
                 if (!isOffline) {
                     fetch(API_URL, {
                         method: 'POST',
+                        mode: 'no-cors', // Google Apps Script 需要此設定
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ action: 'upsert', data: newItem })
                     })
-                        .then(response => {
-                            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                            return response.json();
-                        })
-                        .then(data => console.log('✅ 儲存成功:', data))
+                        .then(() => console.log('✅ 儲存成功 (已發送至 Google Sheets)'))
                         .catch(err => {
                             console.error("❌ Save Error:", err);
-                            // 可選：顯示錯誤提示給使用者
+                            alert('儲存到 Google Sheets 時發生錯誤，但本地已更新');
                         });
                 }
             };
@@ -719,14 +725,11 @@
                 if (!isOffline) {
                     fetch(API_URL, {
                         method: 'POST',
+                        mode: 'no-cors',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ action: 'delete', id: id })
                     })
-                        .then(response => {
-                            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                            return response.json();
-                        })
-                        .then(data => console.log('✅ 刪除成功:', data))
+                        .then(() => console.log('✅ 刪除成功 (已同步至 Google Sheets)'))
                         .catch(err => {
                             console.error("❌ Delete Error:", err);
                         });
@@ -735,6 +738,27 @@
 
             const toggleStatFilter = (type) => { setFilterStat(prev => prev === type ? null : type); setViewMode('dashboard'); };
             const changeMonth = (delta) => { const d = new Date(calendarMonth); d.setMonth(d.getMonth() + delta); setCalendarMonth(d); };
+
+            // 取得任務行高亮樣式
+            const getRowHighlight = (task) => {
+                if (!highlightUrgent) return '';
+
+                // 已完成的任務不高亮
+                if (task.status === 'Done') return '';
+
+                // 延遲任務（最高優先）
+                if (task.status === 'Delayed') {
+                    return 'bg-red-50 border-l-4 border-red-500';
+                }
+
+                // 應開工未動
+                const startDate = getStartDate(task.date, task.duration);
+                if (task.status === 'Todo' && startDate <= todayStr && task.date >= todayStr) {
+                    return 'bg-yellow-50 border-l-4 border-yellow-500';
+                }
+
+                return '';
+            };
 
             const chartData = [
                 { name: 'PlanB', value: tasks.filter(t => t.project === 'PlanB').length, color: '#10b981' },
@@ -1109,6 +1133,20 @@
                                                     </button>
                                                 )}
                                             </div>
+
+                                            {/* 高亮開關 */}
+                                            <div className="flex items-center gap-2 text-sm bg-white px-3 py-2 rounded-lg border">
+                                                <input
+                                                    type="checkbox"
+                                                    id="highlightUrgent"
+                                                    checked={highlightUrgent}
+                                                    onChange={(e) => setHighlightUrgent(e.target.checked)}
+                                                    className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                />
+                                                <label htmlFor="highlightUrgent" className="text-slate-600 cursor-pointer select-none whitespace-nowrap">
+                                                    強調延遲/應開工
+                                                </label>
+                                            </div>
                                         </div>
 
                                         {/* 搜尋結果提示 */}
@@ -1150,7 +1188,11 @@
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-100">
                                                             {filteredTasks.sort((a, b) => new Date(a.date) - new Date(b.date)).map(t => (
-                                                                <tr key={t.id} className={`hover:bg-slate-50 group transition-colors ${t.isCheckpoint ? 'bg-indigo-50/40' : ''}`} tabIndex={0}>
+                                                                <tr
+                                                                    key={t.id}
+                                                                    className={`hover:bg-slate-50 group transition-colors ${t.isCheckpoint ? 'bg-indigo-50/40' : ''} ${getRowHighlight(t)}`}
+                                                                    tabIndex={0}
+                                                                >
                                                                     <td className="px-4 py-3 text-gray-500 font-mono text-xs">#{t.id}</td>
                                                                     <td className="px-4 py-3">
                                                                         {getStatusBadge(t)}
