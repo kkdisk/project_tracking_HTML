@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genentech Project Tracker v6.4 (Enhanced)</title>
+    <title>Genentech Project Tracker v6.5 (Optimized)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -433,6 +433,15 @@
 
             const [todayStr, setTodayStr] = useState('');
             const [calendarMonth, setCalendarMonth] = useState(new Date());
+            const [isMobile, setIsMobile] = useState(false);
+
+            // 偵測行動裝置
+            useEffect(() => {
+                const checkMobile = () => setIsMobile(window.innerWidth < 768);
+                checkMobile();
+                window.addEventListener('resize', checkMobile);
+                return () => window.removeEventListener('resize', checkMobile);
+            }, []);
 
             useEffect(() => {
                 setTodayStr(getTaiwanToday());
@@ -506,6 +515,8 @@
                 fetchData();
             }, []);
 
+            // 效能優化：使用 useMemo 避免不必要的統計計算
+            // 只有在 tasks、todayStr 或 filterProject 改變時才重新計算
             const stats = useMemo(() => {
                 if (!todayStr) return { total: 0, checkpoints: 0, pendingHigh: 0, completed: 0, lateStart: 0, delayed: 0 };
                 const baseTasks = tasks.filter(t => filterProject === 'All' || t.project === filterProject);
@@ -522,6 +533,8 @@
                 };
             }, [tasks, todayStr, filterProject]);
 
+            // 效能優化：使用 useMemo 快取篩選結果
+            // 避免每次渲染都重新執行篩選邏輯
             const filteredTasks = useMemo(() => {
                 const filterFunctions = {
                     'Checkpoints': (t) => t.isCheckpoint,
@@ -545,6 +558,7 @@
                 return result;
             }, [tasks, filterProject, filterStat, todayStr]);
 
+            // 效能優化：快取系統警告訊息
             const alerts = useMemo(() => {
                 if (!todayStr) return [];
                 const list = [];
@@ -554,6 +568,8 @@
                 return list;
             }, [tasks, todayStr, apiError]);
 
+            // 效能優化：快取日曆視圖資料
+            // 只有在月份或任務改變時才重新計算
             const calendarDays = useMemo(() => {
                 const year = calendarMonth.getFullYear();
                 const month = calendarMonth.getMonth();
@@ -850,6 +866,26 @@
                     return () => bodyEl.removeEventListener('scroll', handleBodyScroll);
                 }, []);
 
+                // 行動版友善提示
+                if (isMobile) {
+                    return (
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-8 text-center">
+                            <div className="text-6xl mb-4">📱</div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">建議使用桌面版瀏覽</h3>
+                            <p className="text-slate-600 mb-4">
+                                甘特圖在大螢幕上有更好的使用體驗。<br />
+                                建議您在桌上型電腦或平板橫向模式下查看。
+                            </p>
+                            <button
+                                onClick={() => setViewMode('dashboard')}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                            >
+                                返回列表視圖
+                            </button>
+                        </div>
+                    );
+                }
+
                 return (
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[600px]">
                         <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
@@ -945,7 +981,7 @@
                     <div className="bg-white border-b sticky top-0 z-30 shadow-sm px-6 py-4 flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             <div className="bg-indigo-600 text-white p-2 rounded-lg"><Icon path={paths.list} /></div>
-                            <h1 className="text-xl font-bold text-slate-800">Project Tracker <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">v6.4</span></h1>
+                            <h1 className="text-xl font-bold text-slate-800">Genentech Project Tracker <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">v6.5</span></h1>
                             {isLoading && <div className="flex items-center text-sm text-slate-500 gap-2 ml-4"><div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full spinner"></div> 載入中...</div>}
                             {isOffline && <div className="flex items-center text-sm text-red-500 gap-2 ml-4 bg-red-50 px-2 py-1 rounded"><Icon path={paths.alert} size={14} /> 離線</div>}
                             <div className="text-xs bg-slate-100 text-slate-500 px-3 py-1 rounded-full hidden sm:block ml-4 flex items-center gap-1">
