@@ -407,7 +407,8 @@
             file: <React.Fragment><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></React.Fragment>,
             link: <React.Fragment><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></React.Fragment>,
             gantt: <React.Fragment><path d="M12 2v20" /><path d="M2 6h20" /><path d="M6 10h8" /><path d="M4 14h12" /><path d="M8 18h10" /></React.Fragment>,
-            settings: <React.Fragment><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></React.Fragment>
+            settings: <React.Fragment><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></React.Fragment>,
+            search: <React.Fragment><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></React.Fragment>
         };
 
         const INITIAL_DATA = [
@@ -434,6 +435,7 @@
             const [todayStr, setTodayStr] = useState('');
             const [calendarMonth, setCalendarMonth] = useState(new Date());
             const [isMobile, setIsMobile] = useState(false);
+            const [searchQuery, setSearchQuery] = useState('');
 
             // 偵測行動裝置
             useEffect(() => {
@@ -555,8 +557,19 @@
                     result = result.filter(filterFunctions[filterStat]);
                 }
 
+                // 搜尋篩選：支援多欄位搜尋
+                if (searchQuery.trim()) {
+                    const query = searchQuery.toLowerCase();
+                    result = result.filter(t =>
+                        t.task?.toLowerCase().includes(query) ||
+                        t.owner?.toLowerCase().includes(query) ||
+                        t.notes?.toLowerCase().includes(query) ||
+                        t.category?.toLowerCase().includes(query)
+                    );
+                }
+
                 return result;
-            }, [tasks, filterProject, filterStat, todayStr]);
+            }, [tasks, filterProject, filterStat, todayStr, searchQuery]);
 
             // 效能優化：快取系統警告訊息
             const alerts = useMemo(() => {
@@ -1065,11 +1078,55 @@
                             viewMode === 'dashboard' ? (
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                     <div className="lg:col-span-2 space-y-4">
-                                        <div className="flex gap-2 bg-white p-1 rounded-lg border w-fit">
-                                            {['All', 'PlanB', 'Machine', 'Chip'].map(p => (
-                                                <button key={p} onClick={() => setFilterProject(p)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${filterProject === p ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{p}</button>
-                                            ))}
+                                        {/* 專案篩選與搜尋 */}
+                                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                                            {/* 專案篩選按鈕 */}
+                                            <div className="flex gap-2 bg-white p-1 rounded-lg border w-fit">
+                                                {['All', 'PlanB', 'Machine', 'Chip'].map(p => (
+                                                    <button key={p} onClick={() => setFilterProject(p)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${filterProject === p ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{p}</button>
+                                                ))}
+                                            </div>
+
+                                            {/* 搜尋框 */}
+                                            <div className="relative flex-1 max-w-sm">
+                                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+                                                    <Icon path={paths.search} size={16} />
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    placeholder="搜尋任務或負責人..."
+                                                    className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                                />
+                                                {searchQuery && (
+                                                    <button
+                                                        onClick={() => setSearchQuery('')}
+                                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                                        aria-label="清除搜尋"
+                                                    >
+                                                        <Icon path={paths.x} size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
+
+                                        {/* 搜尋結果提示 */}
+                                        {searchQuery && (
+                                            <div className="px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center justify-between">
+                                                <span className="text-sm text-indigo-700 flex items-center gap-2">
+                                                    <Icon path={paths.search} size={14} />
+                                                    搜尋「<strong>{searchQuery}</strong>」找到 <strong>{filteredTasks.length}</strong> 個結果
+                                                </span>
+                                                <button
+                                                    onClick={() => setSearchQuery('')}
+                                                    className="text-indigo-600 hover:text-indigo-800 text-sm font-medium transition-colors"
+                                                >
+                                                    清除搜尋
+                                                </button>
+                                            </div>
+                                        )}
+
                                         {filteredTasks.length === 0 && !isLoading ? (
                                             <div className="p-12 text-center bg-white rounded-xl border shadow-sm">
                                                 <div className="text-slate-300 mb-4"><Icon path={paths.list} size={48} className="mx-auto" /></div>
