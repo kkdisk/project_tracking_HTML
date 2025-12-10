@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genentech Project Tracker v6.7 (Multiple Dependencies)</title>
+    <title>Genentech Project Tracker v6.8 (Gantt Search + Dependencies Fix)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -859,7 +859,20 @@
             // --- Gantt Chart View (Corrected Layout) ---
             const GanttView = () => {
                 const { sortedTasks, minDate, totalDays } = useMemo(() => {
-                    const ganttTasks = tasks.filter(t => ganttFilter === 'All' || t.project === ganttFilter);
+                    // 先依據專案篩選
+                    let ganttTasks = tasks.filter(t => ganttFilter === 'All' || t.project === ganttFilter);
+
+                    // 再依據搜尋條件篩選（與 Dashboard 相同邏輯）
+                    if (searchQuery.trim()) {
+                        const query = searchQuery.toLowerCase();
+                        ganttTasks = ganttTasks.filter(t =>
+                            t.task.toLowerCase().includes(query) ||
+                            t.owner.toLowerCase().includes(query) ||
+                            t.project.toLowerCase().includes(query) ||
+                            t.notes?.toLowerCase().includes(query)
+                        );
+                    }
+
                     const sorted = ganttTasks.sort((a, b) => new Date(getStartDate(a.date, a.duration)) - new Date(getStartDate(b.date, b.duration)));
                     let min = new Date();
                     let max = new Date();
@@ -872,7 +885,7 @@
                     max.setDate(max.getDate() + 15);
                     const days = Math.ceil((max - min) / (1000 * 60 * 60 * 24));
                     return { sortedTasks: sorted, minDate: min, totalDays: days };
-                }, [tasks, ganttFilter]);
+                }, [tasks, ganttFilter, searchQuery]);
 
                 const getLeftPos = (dStr) => {
                     const d = new Date(dStr);
@@ -1177,6 +1190,45 @@
                         </div>
 
                         {/* Main Views */}
+                        {/* Gantt 視圖專用搜尋框 */}
+                        {viewMode === 'gantt' && (
+                            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 space-y-3 mb-6">
+                                <div className="relative">
+                                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+                                        <Icon path={paths.search} size={16} />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="搜尋任務或負責人..."
+                                        className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                        autoComplete="off"
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            onClick={() => setSearchQuery('')}
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                            aria-label="清除搜尋"
+                                        >
+                                            <Icon path={paths.x} size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                                {searchQuery && (
+                                    <div className="flex items-center gap-2 text-xs text-indigo-700">
+                                        <Icon path={paths.search} size={12} />
+                                        <span>搜尋「<strong>{searchQuery}</strong>」</span>
+                                        <button
+                                            onClick={() => setSearchQuery('')}
+                                            className="text-indigo-600 hover:text-indigo-800 font-medium ml-auto"
+                                        >
+                                            清除搜尋
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {viewMode === 'gantt' ? <GanttView /> : (
                             viewMode === 'dashboard' ? (
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
