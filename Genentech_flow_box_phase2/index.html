@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genentech Project Tracker v6.6 (Feature Complete)</title>
+    <title>Genentech Project Tracker v6.7 (Multiple Dependencies)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -606,6 +606,48 @@
                 return days;
             }, [calendarMonth, tasks]);
 
+            // 解析相依性字串為陣列
+            const parseDependencies = (depStr) => {
+                if (!depStr || typeof depStr !== 'string') return [];
+                return depStr.split(',').map(id => id.trim()).filter(id => id);
+            };
+
+            // 驗證相依性格式與有效性
+            const validateDependencies = (depStr, currentTaskId, allTasks) => {
+                const errors = [];
+                if (!depStr || !depStr.trim()) return errors;
+
+                const depIds = parseDependencies(depStr);
+
+                // 限制最大相依數量
+                if (depIds.length > 10) {
+                    errors.push('⚠️ 相依性數量不可超過 10 個');
+                    return errors;
+                }
+
+                for (const depId of depIds) {
+                    // 檢查格式（必須是數字）
+                    if (isNaN(depId) || depId.includes('.')) {
+                        errors.push(`❌ 相依性 ID "${depId}" 格式不正確（必須是整數）`);
+                        continue;
+                    }
+
+                    // 檢查是否相依自己
+                    if (String(depId) === String(currentTaskId)) {
+                        errors.push(`❌ 任務不能相依自己 (ID: ${depId})`);
+                        continue;
+                    }
+
+                    // 檢查相依的任務是否存在
+                    const depTask = allTasks.find(t => String(t.id) === String(depId));
+                    if (!depTask) {
+                        errors.push(`⚠️ 找不到相依任務 ID: ${depId}`);
+                    }
+                }
+
+                return errors;
+            };
+
             const validateTask = (task) => {
                 const errors = [];
 
@@ -654,17 +696,36 @@
                 return errors;
             };
 
-            const detectCircularDependency = (taskId, dependencyId, currentTasks) => {
-                const visited = new Set();
-                let current = dependencyId;
-                let depth = 0;
-                while (current && depth < 100) {
-                    if (String(current) === String(taskId)) return true;
-                    if (visited.has(current)) return false;
-                    visited.add(current);
-                    const parent = currentTasks.find(t => String(t.id) === String(current));
-                    current = parent?.dependency;
-                    depth++;
+            // 修改為支援多個相依性的循環檢查
+            const detectCircularDependency = (taskId, dependencyStr, currentTasks) => {
+                const depIds = parseDependencies(dependencyStr);
+                if (depIds.length === 0) return false;
+
+                // 使用 BFS 檢查每個相依性鏈
+                for (const depId of depIds) {
+                    const visited = new Set();
+                    const queue = [depId];
+                    let depth = 0;
+
+                    while (queue.length > 0 && depth < 100) {
+                        const current = queue.shift();
+
+                        // 檢查是否形成循環
+                        if (String(current) === String(taskId)) return true;
+
+                        // 避免重複訪問
+                        if (visited.has(current)) continue;
+                        visited.add(current);
+
+                        // 找到當前任務的所有相依性
+                        const parent = currentTasks.find(t => String(t.id) === String(current));
+                        if (parent?.dependency) {
+                            const parentDeps = parseDependencies(parent.dependency);
+                            queue.push(...parentDeps);
+                        }
+
+                        depth++;
+                    }
                 }
                 return false;
             };
@@ -689,8 +750,14 @@
                 };
                 const validationErrors = validateTask(newItem);
                 if (validationErrors.length > 0) { alert('驗證失敗:\n' + validationErrors.join('\n')); return; }
+
+                // 驗證相依性格式與有效性
+                const depErrors = validateDependencies(newItem.dependency, newItem.id, tasks);
+                if (depErrors.length > 0) { alert('相依性驗證失敗:\n' + depErrors.join('\n')); return; }
+
+                // 檢查循環相依性
                 if (newItem.dependency && detectCircularDependency(newItem.id, newItem.dependency, tasks)) {
-                    alert('錯誤：偵測到循環相依性！'); return;
+                    alert('錯誤：偵測到循環相依性！\n任務之間的相依關係形成了迴圈，請調整相依設定。'); return;
                 }
                 const updatedTasks = editingTask ? tasks.map(t => t.id === newItem.id ? newItem : t) : [...tasks, newItem];
                 setTasks(updatedTasks);
@@ -817,23 +884,34 @@
 
                 const drawDependencies = () => {
                     if (!showDependencies) return null;
-                    return sortedTasks.map((task, taskIndex) => {
-                        if (!task.dependency) return null;
-                        const parent = sortedTasks.find(p => String(p.id) === String(task.dependency));
-                        const parentIndex = sortedTasks.indexOf(parent);
-                        if (!parent || parentIndex === -1) return null;
+                    const lines = [];
 
-                        const parentStartStr = getStartDate(parent.date, parent.duration);
-                        const parentX = getLeftPos(parentStartStr) + (parent.duration * PX_PER_DAY);
-                        const parentY = parentIndex * ROW_HEIGHT + 20;
-                        const childStartStr = getStartDate(task.date, task.duration);
-                        const childX = getLeftPos(childStartStr);
-                        const childY = taskIndex * ROW_HEIGHT + 20;
+                    sortedTasks.forEach((task, taskIndex) => {
+                        if (!task.dependency) return;
 
-                        const midX = (parentX + childX) / 2;
-                        const path = `M ${parentX} ${parentY} C ${parentX + 20} ${parentY}, ${childX - 20} ${childY}, ${childX} ${childY}`;
-                        return <path key={`${parent.id}-${task.id}`} d={path} stroke="#94a3b8" strokeWidth="1.5" fill="none" markerEnd="url(#arrowhead)" />;
+                        // 解析多個相依性
+                        const depIds = parseDependencies(task.dependency);
+
+                        depIds.forEach(depId => {
+                            const parent = sortedTasks.find(p => String(p.id) === String(depId));
+                            const parentIndex = sortedTasks.indexOf(parent);
+                            if (!parent || parentIndex === -1) return;
+
+                            const parentStartStr = getStartDate(parent.date, parent.duration);
+                            const parentX = getLeftPos(parentStartStr) + (parent.duration * PX_PER_DAY);
+                            const parentY = parentIndex * ROW_HEIGHT + 20;
+                            const childStartStr = getStartDate(task.date, task.duration);
+                            const childX = getLeftPos(childStartStr);
+                            const childY = taskIndex * ROW_HEIGHT + 20;
+
+                            const path = `M ${parentX} ${parentY} C ${parentX + 20} ${parentY}, ${childX - 20} ${childY}, ${childX} ${childY}`;
+                            lines.push(
+                                <path key={`${parent.id}-${task.id}`} d={path} stroke="#94a3b8" strokeWidth="1.5" fill="none" markerEnd="url(#arrowhead)" />
+                            );
+                        });
                     });
+
+                    return lines;
                 };
 
                 // Group days by month for the month header
@@ -1019,7 +1097,7 @@
                     <div className="bg-white border-b sticky top-0 z-30 shadow-sm px-6 py-4 flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             <div className="bg-indigo-600 text-white p-2 rounded-lg"><Icon path={paths.list} /></div>
-                            <h1 className="text-xl font-bold text-slate-800">Genentech Project Tracker <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">v6.6</span></h1>
+                            <h1 className="text-xl font-bold text-slate-800">Genentech Project Tracker <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">v6.7</span></h1>
                             {isLoading && <div className="flex items-center text-sm text-slate-500 gap-2 ml-4"><div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full spinner"></div> 載入中...</div>}
                             {isOffline && <div className="flex items-center text-sm text-red-500 gap-2 ml-4 bg-red-50 px-2 py-1 rounded"><Icon path={paths.alert} size={14} /> 離線</div>}
                             <div className="text-xs bg-slate-100 text-slate-500 px-3 py-1 rounded-full hidden sm:block ml-4 flex items-center gap-1">
@@ -1203,7 +1281,7 @@
                                                                         <div className="font-medium text-slate-800 flex items-center gap-2">
                                                                             {t.isCheckpoint && <Icon path={paths.flag} size={14} className="text-indigo-600 fill-indigo-100" />}
                                                                             {t.task}
-                                                                            {t.dependency && <div className="tooltip-container"><Icon path={paths.link} size={12} className="text-slate-400 ml-1" /><span className="tooltip-text">相依性: {t.dependency}</span></div>}
+                                                                            {t.dependency && <div className="tooltip-container"><Icon path={paths.link} size={12} className="text-slate-400 ml-1" /><span className="tooltip-text">前置任務: {parseDependencies(t.dependency).map(id => `#${id}`).join(', ')}</span></div>}
                                                                             {t.notes && <div className="tooltip-container"><Icon path={paths.file} size={12} className="text-slate-400 ml-1" /><span className="tooltip-text">{t.notes}</span></div>}
                                                                         </div>
                                                                         {t.priority === 'High' && <span className="text-[10px] text-orange-600 font-bold">⚠️ 急件</span>}
@@ -1355,7 +1433,8 @@
 
                                         <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-1">前置任務 / 相依性 (Dependency)</label>
-                                            <input name="dependency" defaultValue={editingTask?.dependency} placeholder="例如: 需先完成 ID-5" className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            <input name="dependency" defaultValue={editingTask?.dependency} placeholder="輸入前置任務 ID，多個請用逗號分隔 (例如: 5,12,18)" className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            <p className="text-xs text-slate-500 mt-1">💡 提示：可填寫多個 ID，用逗號分隔，最多 10 個</p>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-1">備註 (Notes)</label>
