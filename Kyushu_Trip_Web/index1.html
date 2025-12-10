@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精選九州冬日物語 - 互動行程</title>
+    <style>
+        /* --- 基礎設定 --- */
+        body {
+            font-family: "Microsoft JhengHei", Arial, sans-serif;
+            /* 模擬水彩紙背景色 */
+            background-color: #f9f7f1; 
+            /* 這裡可以換成實際的水彩紙紋理圖片 */
+            /* background-image: url('watercolor_paper_texture.jpg'); */
+            margin: 0;
+            padding: 20px;
+            color: #5a4a42; /* 深棕色文字，配合水彩風格 */
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            color: #8c6239;
+            margin-bottom: 50px;
+        }
+
+        /* --- 時間軸容器 --- */
+        .timeline-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* 模擬連接線 (實際專案建議用 SVG) */
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            left: 50px;
+            top: 0;
+            bottom: 0;
+            width: 10px;
+            background: #a8d8ea; /* 水彩藍 */
+            border-radius: 10px;
+            opacity: 0.6;
+            filter: blur(2px);
+        }
+
+        /* --- 每一天的區塊 --- */
+        .day-section {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 60px;
+            position: relative;
+            margin-left: 80px; /* 留出左側時間線空間 */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 2px solid transparent;
+            
+            /* 初始狀態：隱藏並稍微向下偏移 */
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+
+        /* 當區塊進入視窗時加入的類別 */
+        .day-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 左側的日期標籤 */
+        .day-label {
+            position: absolute;
+            left: -100px;
+            top: 20px;
+            background: #d97b7b; /* 配合圖中的紅色系 */
+            color: white;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-weight: bold;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .day-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #8c6239;
+        }
+
+        /* --- 景點容器 --- */
+        .spots-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: flex-start;
+        }
+
+        /* 獨立景點卡片 */
+        .spot-card {
+            flex: 1 1 200px; /* 讓卡片在小螢幕自動換行 */
+            text-align: center;
+            padding: 15px;
+            background: #fff;
+            border-radius: 15px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        /* 互動效果：滑鼠懸停時放大並浮起 */
+        .spot-card:hover {
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            z-index: 2;
+        }
+
+        /* 景點圖片佔位符 (實際請換成切好的 PNG) */
+        .spot-img-placeholder {
+            width: 100%;
+            height: 150px;
+            /* 這裡用顏色模擬，實際會是透明背景 PNG */
+            background-color: #e0f2f1; 
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            color: #666;
+            border: 2px dashed #b2dfdb;
+        }
+
+        /* 針對特定景點模擬不同顏色 */
+        .kumamon-spot { background-color: #ffe0b2; border-color: #ffcc80; }
+        .onsen-spot { background-color: #e1f5fe; border-color: #b3e5fc; }
+        .food-spot { background-color: #fce4ec; border-color: #f8bbd0; }
+
+        /* 簡單的 Tooltip 提示框 */
+        .tooltip-text {
+            visibility: hidden;
+            width: 160px;
+            background-color: #5a4a42;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 100%;
+            left: 50%;
+            margin-left: -80px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8em;
+            pointer-events: none;
+        }
+        
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #5a4a42 transparent transparent transparent;
+        }
+
+        .spot-card:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* --- 手機版調整 --- */
+        @media (max-width: 768px) {
+            .day-section {
+                margin-left: 50px;
+                padding: 20px;
+            }
+            .timeline-container::before {
+                left: 25px;
+            }
+            .day-label {
+                left: -60px;
+                font-size: 0.8em;
+                padding: 8px 10px;
+            }
+            .spot-card {
+                flex: 1 1 100%; /* 手機上一行顯示一個景點 */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>精選九州冬日物語 (互動行程預覽)</h1>
+
+    <div class="timeline-container">
+
+        <div class="day-section">
+            <div class="day-label">DAY 1<br>(01/29)</div>
+            <h2 class="day-title">啟程：台北 → 福岡</h2>
+            <div class="spots-container">
+                <div class="spot-card">
+                    <div class="spot-img-placeholder"> (飛機插圖) <br> STARLUX JX840</div>
+                    <h3>台北出發</h3>
+                </div>
+                <div class="spot-card">
+                    <div class="spot-img-placeholder kumamon-spot"> (熊本熊送水插圖) </div>
+                    <h3>福岡空港抵達</h3>
+                    <span class="tooltip-text">熊本熊部長親自迎接！獲得限定礦泉水。</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="day-section">
+            <div class="day-label">DAY 2<br>(01/30)</div>
+            <h2 class="day-title">自然與童話小鎮</h2>
+            <div class="spots-container">
+                <div class="spot-card">
+                    <div class="spot-img-placeholder kumamon-spot"> (野生動物園巴士插圖) </div>
+                    <h3>野生動物園</h3>
+                    <span class="tooltip-text">搭乘叢林巴士近距離餵食獅子！</span>
+                </div>
+                <div class="spot-card">
+                    <div class="spot-img-placeholder onsen-spot"> (金鱗湖插圖) </div>
+                    <h3>金鱗湖森林小徑</h3>
+                </div>
+                <div class="spot-card">
+                    <div class="spot-img-placeholder"> (湯布院插圖) </div>
+                    <h3>湯布院童話風小鎮</h3>
+                    <span class="tooltip-text">別忘了去 SNOOPY 茶屋打卡喔！</span>
+                </div>
+                 <div class="spot-card">
+                    <div class="spot-img-placeholder onsen-spot"> (溫泉飯店插圖) </div>
+                    <h3>溫泉飯店</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="day-section">
+            <div class="day-label">DAY 3<br>(01/31)</div>
+            <h2 class="day-title">踏雪尋莓趣</h2>
+            <div class="spots-container">
+                <div class="spot-card">
+                    <div class="spot-img-placeholder onsen-spot"> (滑雪盆插圖) </div>
+                    <h3>九重森林公園</h3>
+                    <span class="tooltip-text">體驗刺激好玩的雪盆滑行！</span>
+                </div>
+                <div class="spot-card">
+                    <div class="spot-img-placeholder"> (草千里馬匹插圖) </div>
+                    <h3>阿蘇米塚、草千里</h3>
+                </div>
+                <div class="spot-card">
+                    <div class="spot-img-placeholder food-spot"> (採草莓插圖) </div>
+                    <h3>農場採草莓</h3>
+                    <span class="tooltip-text">40分鐘無限量吃到飽，請準備好煉乳！</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="day-section">
+            <div class="day-label">DAY 4<br>(02/01)</div>
+            <h2 class="day-title">鐵道與名城巡禮</h2>
+            <div class="spots-container">
+                <div class="spot-card">
+                    <div class="spot-img-placeholder"> (南阿蘇小火車插圖) </div>
+                    <h3>南阿蘇鐵道</h3>
+                </div>
+                 <div class="spot-card">
+                    <div class="spot-img-placeholder kumamon-spot"> (熊本城與熊本熊插圖) </div>
+                    <h3>熊本城 天守閣</h3>
+                    <span class="tooltip-text">日本三大名城之一，黑色外觀超帥氣。</span>
+                </div>
+                <div class="spot-card">
+                    <div class="spot-img-placeholder"> (熊本市電車插圖) </div>
+                    <h3>熊本市區觀光</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="day-section">
+            <div class="day-label">DAY 5<br>(02/02)</div>
+            <h2 class="day-title">文化購物與賦歸</h2>
+            <div class="spots-container">
+                <div class="spot-card">
+                    <div class="spot-img-placeholder food-spot"> (太宰府梅枝餅插圖) </div>
+                    <h3>太宰府天滿宮</h3>
+                    <span class="tooltip-text">賞梅花、摸御神牛開智慧、吃梅枝餅。</span>
+                </div>
+                 <div class="spot-card">
+                    <div class="spot-img-placeholder"> (鋼彈插圖) </div>
+                    <h3>LaLaport福岡</h3>
+                    <span class="tooltip-text">超巨型實體鋼彈立像！</span>
+                </div>
+                <div class="spot-card">
+                    <div class="spot-img-placeholder kumamon-spot"> (機場說再見插圖) </div>
+                    <h3>福岡空港賦歸</h3>
+                    <span class="tooltip-text">Goodbye! 下次再來玩！</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- JavaScript 互動控制 ---
+
+        // 使用 Intersection Observer API 來偵測元素是否進入視窗
+        // 這是現代網頁製作捲動動畫最高效的方法
+        const observerOptions = {
+            root: null, // 以瀏覽器視窗為基準
+            rootMargin: '0px',
+            threshold: 0.2 // 當元素有 20% 進入視窗時觸發
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                // 如果元素進入視窗
+                if (entry.isIntersecting) {
+                    // 加上 'visible' class，觸發 CSS 動畫
+                    entry.target.classList.add('visible');
+                    // 動畫觸發後就不需要再偵測了，取消觀察
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // 選取所有需要加入動畫的 Day 區塊
+        const daySections = document.querySelectorAll('.day-section');
+        daySections.forEach(section => {
+            observer.observe(section);
+        });
+
+    </script>
+</body>
+</html>

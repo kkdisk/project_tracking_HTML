@@ -1,0 +1,295 @@
+/* 全局設定 */
+:root {
+    --primary-color: #FF7F50; /* 溫暖的珊瑚橘，配合熊本熊腮紅 */
+    --secondary-color: #4A90E2; /* 冬日藍色 */
+    --bg-light: #F9F5F0; /* 溫暖米色背景 */
+    --text-dark: #333;
+}
+
+body {
+    margin: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    line-height: 1.6;
+    color: var(--text-dark);
+    background-color: var(--bg-light);
+}
+
+h1, h2, h3 {
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+a {
+    text-decoration: none;
+}
+
+.container {
+    width: 90%;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.section-padding {
+    padding: 60px 0;
+}
+
+/* 1. Hero Section */
+#hero {
+    height: 100vh;
+    /* 請確保 images 資料夾有 hero_ghibli.jpg 這張圖 */
+    background-image: url('images/hero_ghibli.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed; /* 簡單的視差效果 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+    position: relative;
+}
+
+/* 增加一個黑色遮罩讓文字更清晰 */
+#hero::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.3);
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.hero-content h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.scroll-btn {
+    display: inline-block;
+    margin-top: 30px;
+    padding: 10px 25px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 30px;
+    font-weight: bold;
+    transition: 0.3s;
+    animation: bounce 2s infinite;
+}
+
+.scroll-btn:hover {
+    background-color: #e06b40;
+    transform: translateY(-3px);
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-10px);}
+    60% {transform: translateY(-5px);}
+}
+
+/* 2. 地圖容器通用樣式 */
+.map-container {
+    position: relative;
+    max-width: 900px;
+    margin: 30px auto;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.map-container img {
+    width: 100%;
+    display: block;
+}
+
+/* 總覽地圖熱點 */
+.hotspot {
+    position: absolute;
+    width: 25px;
+    height: 25px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 10;
+}
+
+.hotspot-pulse {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%; height: 100%;
+    background: inherit;
+    border-radius: inherit;
+    animation: pulse 1.5s infinite;
+    opacity: 0.7;
+}
+
+@keyframes pulse {
+    0% {transform: translate(-50%, -50%) scale(1); opacity: 0.7;}
+    100% {transform: translate(-50%, -50%) scale(2.5); opacity: 0;}
+}
+
+/* 3. 每日行程區塊 */
+.daily-section:nth-child(even) {
+    background-color: #fff; /* 交替背景色 */
+}
+
+.daily-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.comic-strip {
+    max-width: 800px;
+    margin: 0 auto 40px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 3px 3px 10px rgba(0,0,0,0.1);
+}
+
+.comic-strip img {
+    width: 100%;
+    display: block;
+}
+
+.interactive-map-area h3 {
+    text-align: center;
+    color: var(--secondary-color);
+}
+
+/* 詳細地圖觸發點 (Trigger) */
+.map-trigger {
+    position: absolute;
+    width: 40px; height: 40px;
+    background: #fff;
+    border: 3px solid var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+}
+
+.map-trigger:hover {
+    transform: translate(-50%, -50%) scale(1.15);
+    background: var(--primary-color);
+}
+
+/* ================= 彈出視窗 (Modals) 樣式 ================= */
+.modal-overlay {
+    display: none; /* 預設隱藏 */
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* 顯示狀態 */
+.modal-overlay.show {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    max-width: 600px;
+    width: 100%;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.show .modal-content {
+    transform: translateY(0);
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px; right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #999;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.close-btn:hover {
+    color: var(--primary-color);
+}
+
+.modal-body {
+    text-align: center;
+}
+
+.modal-img-preview {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover; /* 如果用真實照片，保持裁切 */
+    border-radius: 10px;
+    margin-bottom: 20px;
+    /* 這裡暫時用原圖做示意，建議換成該景點的特寫圖或照片 */
+    display: none; /* 暫時隱藏，您可以稍後打開 */
+}
+
+.modal-text h3 {
+    color: var(--primary-color);
+    margin-top: 0;
+}
+
+/* 頁尾 */
+footer {
+    background: var(--text-dark);
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+    .hero-content h1 { font-size: 2rem; }
+    .map-trigger { width: 30px; height: 30px; font-size: 16px; }
+}
+/* style.css 的最下方新增 */
+
+/* 針對平板和手機的響應式設定 */
+@media (max-width: 768px) {
+    #hero {
+        /* 手機版不再強制佔滿全螢幕高度，改為固定高度或自適應 */
+        height: auto;
+        min-height: 60vh; /* 例如只佔螢幕高度的 60% */
+        
+        /* 關鍵：調整背景圖片的對齊位置 */
+        /* 如果想看到更多飛機和天空，可以試試 'center top' 或 'left top' */
+        /* 如果想看到更多地面人物，可以試試 'center bottom' */
+        background-position: center center; 
+        
+        /* 視差滾動在手機上常有效能問題，建議關閉 */
+        background-attachment: scroll;
+    }
+
+    .hero-content h1 {
+        font-size: 2rem; /* 手機版標題字改小一點 */
+    }
+
+    .hero-content p {
+        font-size: 1rem;
+    }
+}
