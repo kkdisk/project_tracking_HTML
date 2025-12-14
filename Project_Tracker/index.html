@@ -504,6 +504,19 @@
         const PROJECTS = ['CKSX', 'Jamstec', 'Genentech', '5880 Chip', 'Internal', 'TBD', 'Other'];
         const OWNERS = ['Anting', '宗轅', 'Jerry', '子宗', 'Jun', '慶德', 'HW', 'EE', 'RD', 'QA', 'SW', 'All', 'Unassigned'];
 
+        // ✅ Task ID部門代碼Mapping (用於未來Task ID升級)
+        const DEPT_CODES = {
+            '晶片': 'CHIP',
+            '機構': 'MECH',
+            '軟體': 'SW',
+            '電控': 'EC',
+            '流道': 'FLOW',
+            '生醫': 'BIO',
+            'QA': 'QA',
+            '管理': 'MGT',
+            'issue': 'ISS'
+        };
+
         // Team 色彩配置
         const getTeamColor = (team) => {
             const colors = {
@@ -556,6 +569,7 @@
             const [isOffline, setIsOffline] = useState(false);
             const [viewMode, setViewMode] = useState('dashboard');
             const [filterTeam, setFilterTeam] = useState('All');
+            const [filterProject, setFilterProject] = useState('All'); // ✅ 新增Project篩選
             const [filterStat, setFilterStat] = useState(null);
             const [ganttFilterTeam, setGanttFilterTeam] = useState('All');
             const [showDependencies, setShowDependencies] = useState(false);
@@ -873,6 +887,11 @@
                     return t.team && t.team === filterTeam;
                 });
 
+                // ✅ 新增:Project篩選
+                if (filterProject !== 'All') {
+                    result = result.filter(t => t.project && t.project === filterProject);
+                }
+
                 if (filterStat && filterFunctions[filterStat]) {
                     result = result.filter(filterFunctions[filterStat]);
                 }
@@ -897,7 +916,7 @@
                 }
 
                 return result;
-            }, [tasks, filterTeam, filterStat, todayStr, searchQuery, hideCompleted]);
+            }, [tasks, filterTeam, filterProject, filterStat, todayStr, searchQuery, hideCompleted]);
 
             // 效能優化：快取系統警告訊息
             const alerts = useMemo(() => {
@@ -1053,8 +1072,12 @@
                 e.preventDefault();
                 const fd = new FormData(e.target);
                 const defaultDate = getTaiwanToday();
+
+                // ✅ 方案 A 修改：新增時不傳 id，讓後端自動生成新格式 ID
+                const isEditing = !!editingTask;
                 const newItem = {
-                    id: editingTask?.id || Date.now(),
+                    // 只在編輯時包含 id
+                    ...(isEditing && { id: editingTask.id }),
                     project: fd.get('project'),
                     team: fd.get('team'),
                     task: fd.get('task'),
@@ -1070,36 +1093,44 @@
                     verification: fd.get('verification'),
                     notes: fd.get('notes')
                 };
+
                 const validationErrors = validateTask(newItem);
                 if (validationErrors.length > 0) { alert('驗證失敗:\n' + validationErrors.join('\n')); return; }
 
-                // 驗證相依性格式與有效性
-                const depErrors = validateDependencies(newItem.dependency, newItem.id, tasks);
-                if (depErrors.length > 0) { alert('相依性驗證失敗:\n' + depErrors.join('\n')); return; }
+                // 驗證相依性格式與有效性（新增時跳過 id 檢查）
+                if (isEditing) {
+                    const depErrors = validateDependencies(newItem.dependency, newItem.id, tasks);
+                    if (depErrors.length > 0) { alert('相依性驗證失敗:\n' + depErrors.join('\n')); return; }
 
-                // 檢查循環相依性
-                if (newItem.dependency && detectCircularDependency(newItem.id, newItem.dependency, tasks)) {
-                    alert('錯誤：偵測到循環相依性！\n任務之間的相依關係形成了迴圈，請調整相依設定。'); return;
+                    // 檢查循環相依性
+                    if (newItem.dependency && detectCircularDependency(newItem.id, newItem.dependency, tasks)) {
+                        alert('錯誤：偵測到循環相依性！\n任務之間的相依關係形成了迴圈，請調整相依設定。'); return;
+                    }
                 }
-                const updatedTasks = editingTask ? tasks.map(t => t.id === newItem.id ? newItem : t) : [...tasks, newItem];
-                setTasks(updatedTasks);
 
-                // 儲存到本地備份
-                try {
-                    localStorage.setItem('tasks_backup', JSON.stringify(updatedTasks));
-                    localStorage.setItem('tasks_backup_time', new Date().toISOString());
-                } catch (e) {
-                    console.warn('本地儲存失敗:', e);
+                // 本地更新（編輯時）或臨時新增
+                if (isEditing) {
+                    const updatedTasks = tasks.map(t => t.id === newItem.id ? newItem : t);
+                    setTasks(updatedTasks);
+
+                    // 儲存到本地備份
+                    try {
+                        localStorage.setItem('tasks_backup', JSON.stringify(updatedTasks));
+                        localStorage.setItem('tasks_backup_time', new Date().toISOString());
+                    } catch (e) {
+                        console.warn('本地儲存失敗:', e);
+                    }
                 }
 
                 setIsModalOpen(false);
+
                 if (!isOffline) {
                     const payload = {
-                        action: editingTask ? 'update' : 'create',
+                        action: isEditing ? 'update' : 'upsert',  // ✅ 使用 upsert 讓後端處理
                         data: newItem
                     };
 
-                    console.log('🚀 發送到API:', payload.action, '任務ID:', newItem.id);
+                    console.log('🚀 發送到API:', payload.action, isEditing ? `任務ID: ${newItem.id}` : '新任務（後端將生成ID）');
 
                     fetch(API_URL, {
                         method: 'POST',
@@ -1111,7 +1142,41 @@
                     })
                         .then(() => {
                             console.log('✅ 已發送至 Google Sheets');
-                            console.log('💡 請手動檢查Google Sheets確認資料');
+
+                            // ✅ 新增任務後重新載入資料以取得後端生成的新 ID
+                            if (!isEditing) {
+                                console.log('🔄 重新載入資料以取得新 Task ID...');
+                                setIsLoading(true);
+
+                                // 延遲 1 秒後重新載入，給後端時間處理
+                                setTimeout(() => {
+                                    fetch(API_URL + '?action=read')
+                                        .then(res => res.json())
+                                        .then(result => {
+                                            const data = result.data || result;
+                                            if (Array.isArray(data) && data.length > 0) {
+                                                const formatted = data.map(item => ({
+                                                    ...item,
+                                                    id: item.id,
+                                                    duration: Number(item.duration),
+                                                    isCheckpoint: item.isCheckpoint === true || item.isCheckpoint === "TRUE",
+                                                    date: normalizeDate(item.date),
+                                                    dependency: item.dependency || '',
+                                                    notes: item.notes || '',
+                                                    category: item.category || item.team || 'Mechanism'
+                                                }));
+                                                setTasks(formatted);
+                                                console.log('✅ 資料已重新載入，新 Task ID:', formatted[formatted.length - 1]?.id);
+                                            }
+                                        })
+                                        .catch(err => {
+                                            console.error('❌ 重新載入失敗:', err);
+                                        })
+                                        .finally(() => {
+                                            setIsLoading(false);
+                                        });
+                                }, 1000);
+                            }
                         })
                         .catch(err => {
                             console.error("❌ 發送失敗:", err);
@@ -1621,6 +1686,23 @@
                                             ))}
                                         </div>
 
+                                        {/* ✅ 新增: Project 篩選按鈕 */}
+                                        <div className="flex flex-wrap gap-2 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                            <span className="text-xs text-slate-500 font-semibold self-center mr-2">專案:</span>
+                                            {['All', ...PROJECTS].map(p => (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => setFilterProject(p)}
+                                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${filterProject === p
+                                                        ? `${getProjectColor(p)} shadow-md`
+                                                        : 'text-slate-600 hover:bg-slate-100 hover:shadow-sm'
+                                                        }`}
+                                                >
+                                                    {p}
+                                                </button>
+                                            ))}
+                                        </div>
+
                                         {/* 第二行: 搜尋框 + 複選框 */}
                                         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                                             {/* 搜尋框 */}
@@ -1724,6 +1806,7 @@
                                                                 <td className="px-4 py-4">
                                                                     {getStatusBadge(t)}
                                                                     <div className={`text-[10px] mt-1.5 px-2 py-0.5 w-fit rounded-full border font-medium ${getTeamBadgeClass(t.team)}`}>{t.team}</div>
+                                                                    {t.project && <div className={`text-[10px] mt-1 px-2 py-0.5 w-fit rounded-md border font-medium ${getProjectColor(t.project)}`}>{t.project}</div>}
                                                                 </td>
                                                                 <td className="px-4 py-4">
                                                                     <div className="font-medium text-slate-900 flex items-center gap-2">
