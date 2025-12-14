@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genentech Project Tracker v6.8 (Gantt Search + Dependencies Fix)</title>
+    <title>Genentech Project Tracker v6.9 (Hide Completed Tasks)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -440,11 +440,20 @@
                 const saved = localStorage.getItem('highlightUrgent');
                 return saved !== null ? JSON.parse(saved) : true;
             });
+            const [hideCompleted, setHideCompleted] = useState(() => {
+                const saved = localStorage.getItem('hideCompleted');
+                return saved !== null ? JSON.parse(saved) : true;
+            });
 
             // 持久化高亮設定
             useEffect(() => {
                 localStorage.setItem('highlightUrgent', JSON.stringify(highlightUrgent));
             }, [highlightUrgent]);
+
+            // 持久化隱藏已完成設定
+            useEffect(() => {
+                localStorage.setItem('hideCompleted', JSON.stringify(hideCompleted));
+            }, [hideCompleted]);
 
             // 偵測行動裝置
             useEffect(() => {
@@ -571,6 +580,11 @@
                     result = result.filter(filterFunctions[filterStat]);
                 }
 
+                // 隱藏已完成任務的篩選
+                if (hideCompleted) {
+                    result = result.filter(t => t.status !== 'Done');
+                }
+
                 // 搜尋篩選：支援多欄位搜尋
                 if (searchQuery.trim()) {
                     const query = searchQuery.toLowerCase();
@@ -583,7 +597,7 @@
                 }
 
                 return result;
-            }, [tasks, filterProject, filterStat, todayStr, searchQuery]);
+            }, [tasks, filterProject, filterStat, todayStr, searchQuery, hideCompleted]);
 
             // 效能優化：快取系統警告訊息
             const alerts = useMemo(() => {
@@ -1118,7 +1132,7 @@
                     <div className="bg-white border-b sticky top-0 z-30 shadow-sm px-6 py-4 flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             <div className="bg-indigo-600 text-white p-2 rounded-lg"><Icon path={paths.list} /></div>
-                            <h1 className="text-xl font-bold text-slate-800">Genentech Project Tracker <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">v6.8</span></h1>
+                            <h1 className="text-xl font-bold text-slate-800">Genentech Project Tracker <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">v6.9</span></h1>
                             {isLoading && <div className="flex items-center text-sm text-slate-500 gap-2 ml-4"><div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full spinner"></div> 載入中...</div>}
                             {isOffline && <div className="flex items-center text-sm text-red-500 gap-2 ml-4 bg-red-50 px-2 py-1 rounded"><Icon path={paths.alert} size={14} /> 離線</div>}
                             <div className="text-xs bg-slate-100 text-slate-500 px-3 py-1 rounded-full hidden sm:block ml-4 flex items-center gap-1">
@@ -1284,6 +1298,20 @@
                                                 />
                                                 <label htmlFor="highlightUrgent" className="text-slate-600 cursor-pointer select-none whitespace-nowrap">
                                                     強調延遲/應開工
+                                                </label>
+                                            </div>
+
+                                            {/* 隱藏已完成開關 */}
+                                            <div className="flex items-center gap-2 text-sm bg-white px-3 py-2 rounded-lg border">
+                                                <input
+                                                    type="checkbox"
+                                                    id="hideCompleted"
+                                                    checked={hideCompleted}
+                                                    onChange={(e) => setHideCompleted(e.target.checked)}
+                                                    className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                />
+                                                <label htmlFor="hideCompleted" className="text-slate-600 cursor-pointer select-none whitespace-nowrap">
+                                                    隱藏已完成
                                                 </label>
                                             </div>
                                         </div>
