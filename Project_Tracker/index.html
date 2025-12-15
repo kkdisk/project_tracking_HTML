@@ -500,9 +500,7 @@
         ];
 
         const CATEGORIES = ['Mechanism', 'Electrical', 'Software', 'QA', 'Design', 'Flow'];
-        const TEAMS = ['晶片', '機構', '軟體', '電控', '流道', '生醫', 'QA', '管理', 'issue'];
-        const PROJECTS = ['CKSX', 'Jamstec', 'Genentech', '5880 Chip', 'Internal', 'TBD', 'Other'];
-        const OWNERS = ['Anting', '宗轅', 'Jerry', '子宗', 'Jun', '慶德', 'HW', 'EE', 'RD', 'QA', 'SW', 'All', 'Unassigned'];
+        // ✅ TEAMS/PROJECTS/OWNERS 已移至 App 組件內部，從 API 動態載入
 
         // ✅ Task ID部門代碼Mapping (用於未來Task ID升級)
         const DEPT_CODES = {
@@ -597,6 +595,11 @@
                 return saved !== null ? JSON.parse(saved) : true; // 預設隱藏
             });
 
+            // ✅ Phase 1: 動態主資料
+            const [dynamicTeams, setDynamicTeams] = useState([]);
+            const [dynamicProjects, setDynamicProjects] = useState([]);
+            const [dynamicOwners, setDynamicOwners] = useState([]);
+
             // 持久化高亮設定
             useEffect(() => {
                 localStorage.setItem('highlightUrgent', JSON.stringify(highlightUrgent));
@@ -619,6 +622,50 @@
                 setTodayStr(getTaiwanToday());
                 setCalendarMonth(new Date());
             }, []);
+
+            // ✅ Phase 1: 載入動態主資料
+            useEffect(() => {
+                const loadMasterData = async () => {
+                    try {
+                        // 載入 Teams
+                        const teamsRes = await fetch(`${API_URL}?action=getTeams`);
+                        const teamsData = await teamsRes.json();
+                        if (teamsData.success) {
+                            setDynamicTeams(teamsData.data.filter(t => t.isActive).map(t => t.teamName));
+                            console.log('✅ 動態載入 Teams:', teamsData.data.length);
+                        }
+
+                        // 載入 Projects
+                        const projectsRes = await fetch(`${API_URL}?action=getProjects`);
+                        const projectsData = await projectsRes.json();
+                        if (projectsData.success) {
+                            setDynamicProjects(projectsData.data.map(p => p.projectName));
+                            console.log('✅ 動態載入 Projects:', projectsData.data.length);
+                        }
+
+                        // 載入 Owners
+                        const ownersRes = await fetch(`${API_URL}?action=getOwners`);
+                        const ownersData = await ownersRes.json();
+                        if (ownersData.success) {
+                            setDynamicOwners(ownersData.data.filter(o => o.isActive).map(o => o.ownerName));
+                            console.log('✅ 動態載入 Owners:', ownersData.data.length);
+                        }
+                    } catch (error) {
+                        console.error('❌ 載入主資料失敗:', error);
+                        // 失敗時使用備份的硬編碼列表
+                    }
+                };
+                loadMasterData();
+            }, []);
+
+            // ✅ Phase 1: 動態主資料 (備份列表內嵌)
+            const TEAMS_FALLBACK = ['晶片', '機構', '軟體', '電控', '流道', '生醫', 'QA', '管理', 'issue'];
+            const PROJECTS_FALLBACK = ['CKSX', 'Jamstec', 'Genentech', '5880 Chip', 'Internal', 'TBD', 'Other'];
+            const OWNERS_FALLBACK = ['Anting', '宗轅', 'Jerry', '子宗', 'Jun', '慶德', 'HW', 'EE', 'RD', 'QA', 'SW', 'All', 'Unassigned'];
+
+            const TEAMS = dynamicTeams.length > 0 ? dynamicTeams : TEAMS_FALLBACK;
+            const PROJECTS = dynamicProjects.length > 0 ? dynamicProjects : PROJECTS_FALLBACK;
+            const OWNERS = dynamicOwners.length > 0 ? dynamicOwners : OWNERS_FALLBACK;
 
             useEffect(() => {
                 setIsLoading(true);
@@ -1553,6 +1600,20 @@
                                     <Icon path={paths.gantt} size={16} />
                                     <span className="hidden sm:inline">甘特圖</span>
                                 </button>
+
+                                {/* 設定按鈕 - Phase 1: 系統管理介面 */}
+                                <button
+                                    onClick={() => setViewMode('settings')}
+                                    className={`px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-all duration-200 ${viewMode === 'settings'
+                                        ? 'bg-indigo-100 text-indigo-700 shadow-sm ring-2 ring-indigo-200'
+                                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                                        }`}
+                                    title="設定"
+                                    aria-pressed={viewMode === 'settings'}
+                                >
+                                    <Icon path={paths.settings} size={16} />
+                                    <span className="hidden sm:inline">設定</span>
+                                </button>
                             </div>
 
                             <div className="w-px h-8 bg-slate-300"></div>
@@ -1666,7 +1727,9 @@
                             </div>
                         )}
                         {viewMode === 'gantt' ? <GanttView /> : (
-                            viewMode === 'dashboard' ? (
+                            viewMode === 'settings' ? (
+                                <SettingsView apiUrl={API_URL} />
+                            ) : viewMode === 'dashboard' ? (
                                 <div className="space-y-4">
                                     {/* 篩選與搜尋區 - 優化布局 */}
                                     <div className="space-y-3">
@@ -1968,14 +2031,8 @@
                                                     <label className="block text-sm font-medium text-slate-700 mb-1">
                                                         專案 (Project) <span className="text-red-500">*</span>
                                                     </label>
-                                                    <select name="project" defaultValue={editingTask?.project || 'TBD'} required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500">
-                                                        <option value="TBD">TBD (待定)</option>
-                                                        <option value="CKSX">CKSX</option>
-                                                        <option value="Jamstec">Jamstec</option>
-                                                        <option value="Genentech">Genentech</option>
-                                                        <option value="5880 Chip">5880 Chip</option>
-                                                        <option value="Internal">Internal</option>
-                                                        <option value="Other">Other</option>
+                                                    <select name="project" defaultValue={editingTask?.project || PROJECTS[0]} required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                                                        {PROJECTS.map(p => <option key={p} value={p}>{p}</option>)}
                                                     </select>
                                                 </div>
 
@@ -2099,9 +2156,18 @@
             );
         };
 
+    </script>
+
+    <!-- ==================== 外部組件引入 ==================== -->
+    <!-- Phase 1: 系統管理介面 -->
+    <script type="text/babel" src="js/components/SettingsView.js"></script>
+
+    <!-- ==================== 應用啟動 ==================== -->
+    <script type="text/babel">
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
+
 </body>
 
 </html>
