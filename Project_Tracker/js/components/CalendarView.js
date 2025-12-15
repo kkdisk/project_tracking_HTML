@@ -7,25 +7,74 @@ const CalendarView = ({
     calendarMonth,
     setCalendarMonth,
     setEditingTask,
-    setIsModalOpen
+    setIsModalOpen,
+    searchQuery = ''  // ✅ 添加 searchQuery prop
 }) => {
     const { useMemo } = React;
 
-    // 效能優化：快取日曆視圖資料
-    // 只有在月份或任務改變時才重新計算
+    // 效能優化：快取日曆視圖資料（添加搜尋過濾）
+    // 只有在月份、任務或搜尋條件改變時才重新計算
     const calendarDays = useMemo(() => {
         const year = calendarMonth.getFullYear();
         const month = calendarMonth.getMonth();
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
         const days = [];
+
         for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+
         for (let i = 1; i <= lastDay.getDate(); i++) {
             const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-            days.push({ date: i, fullDate: dStr, tasks: tasks.filter(t => t.date === dStr) });
+            let dayTasks = tasks.filter(t => t.date === dStr);
+
+            // ✅ 應用搜尋過濾（與 Dashboard/GanttView 一致）
+            if (searchQuery.trim()) {
+                const query = searchQuery.trim();
+                const prefixMatch = query.match(/^(project|owner|pic|team|task|note|category):(.*)/i);
+
+                if (prefixMatch) {
+                    // 前綴詞搜尋
+                    const field = prefixMatch[1].toLowerCase();
+                    const searchValue = prefixMatch[2].toLowerCase();
+
+                    dayTasks = dayTasks.filter(t => {
+                        switch (field) {
+                            case 'project':
+                                return t.project && String(t.project).toLowerCase().includes(searchValue);
+                            case 'owner':
+                            case 'pic':
+                                return t.owner && String(t.owner).toLowerCase().includes(searchValue);
+                            case 'team':
+                                return t.team && String(t.team).toLowerCase().includes(searchValue);
+                            case 'task':
+                                return t.task && String(t.task).toLowerCase().includes(searchValue);
+                            case 'note':
+                                return t.notes && String(t.notes).toLowerCase().includes(searchValue);
+                            case 'category':
+                                return t.category && String(t.category).toLowerCase().includes(searchValue);
+                            default:
+                                return false;
+                        }
+                    });
+                } else {
+                    // 一般搜尋
+                    const lowerQuery = query.toLowerCase();
+                    dayTasks = dayTasks.filter(t => {
+                        const matchTask = t.task && String(t.task).toLowerCase().includes(lowerQuery);
+                        const matchOwner = t.owner && String(t.owner).toLowerCase().includes(lowerQuery);
+                        const matchNotes = t.notes && String(t.notes).toLowerCase().includes(lowerQuery);
+                        const matchCategory = t.category && String(t.category).toLowerCase().includes(lowerQuery);
+                        const matchTeam = t.team && String(t.team).toLowerCase().includes(lowerQuery);
+                        const matchProject = t.project && String(t.project).toLowerCase().includes(lowerQuery);
+                        return matchTask || matchOwner || matchNotes || matchCategory || matchTeam || matchProject;
+                    });
+                }
+            }
+
+            days.push({ date: i, fullDate: dStr, tasks: dayTasks });
         }
         return days;
-    }, [calendarMonth, tasks]);
+    }, [calendarMonth, tasks, searchQuery]);
 
     const changeMonth = (offset) => {
         setCalendarMonth(prev => {

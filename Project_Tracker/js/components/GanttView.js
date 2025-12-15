@@ -9,20 +9,20 @@
 // So I must add showDependencies and setShowDependencies to props.
 
 const GanttView = ({
-    tasks,
-    ganttFilterTeam,
-    searchQuery,
-    setGanttFilterTeam,
-    setEditingTask,
-    setIsModalOpen,
-    setViewMode,
-    isMobile,
-    todayStr,
+    tasks = [],  // ✅ 添加默認空陣列，防止 undefined
+    ganttFilterTeam = 'All',  // ✅ 默認值
+    searchQuery = '',  // ✅ 默認空字串，防止 trim() 錯誤
+    setGanttFilterTeam = () => { },
+    setEditingTask = () => { },
+    setIsModalOpen = () => { },
+    setViewMode = () => { },
+    isMobile = false,
+    todayStr = new Date().toISOString().split('T')[0],
     // dependencies related
-    showDependencies,
-    setShowDependencies,
+    showDependencies = false,
+    setShowDependencies = () => { },
     // Constants or Data
-    TEAMS,
+    TEAMS = [],  // ✅ 默認空陣列
     PX_PER_DAY = 40,
     ROW_HEIGHT = 40
 }) => {
@@ -32,17 +32,47 @@ const GanttView = ({
         // 先依據 Team 篩選
         let ganttTasks = tasks.filter(t => ganttFilterTeam === 'All' || (t.team && t.team === ganttFilterTeam));
 
-        // 再依據搜尋條件篩選（與 Dashboard 相同邏輯）
+        // 再依據搜尋條件篩選（支援前綴詞搜尋）
         if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            ganttTasks = ganttTasks.filter(t => {
-                // 安全地將欄位轉換為字符串再進行搜尋
-                const matchTask = t.task && String(t.task).toLowerCase().includes(query);
-                const matchOwner = t.owner && String(t.owner).toLowerCase().includes(query);
-                const matchTeam = t.team && String(t.team).toLowerCase().includes(query);
-                const matchNotes = t.notes && String(t.notes).toLowerCase().includes(query);
-                return matchTask || matchOwner || matchTeam || matchNotes;
-            });
+            const query = searchQuery.trim();
+
+            // 檢查是否使用前綴詞搜尋 (例如: "project:Genentech" 或 "pic:James")
+            const prefixMatch = query.match(/^(project|owner|pic|team|task|note):(.*)/i);
+
+            if (prefixMatch) {
+                // 前綴詞搜尋模式
+                const field = prefixMatch[1].toLowerCase();
+                const searchValue = prefixMatch[2].toLowerCase();
+
+                ganttTasks = ganttTasks.filter(t => {
+                    switch (field) {
+                        case 'project':
+                            return t.project && String(t.project).toLowerCase().includes(searchValue);
+                        case 'owner':
+                        case 'pic':
+                            return t.owner && String(t.owner).toLowerCase().includes(searchValue);
+                        case 'team':
+                            return t.team && String(t.team).toLowerCase().includes(searchValue);
+                        case 'task':
+                            return t.task && String(t.task).toLowerCase().includes(searchValue);
+                        case 'note':
+                            return t.notes && String(t.notes).toLowerCase().includes(searchValue);
+                        default:
+                            return false;
+                    }
+                });
+            } else {
+                // 一般搜尋模式（搜尋所有欄位）
+                const lowerQuery = query.toLowerCase();
+                ganttTasks = ganttTasks.filter(t => {
+                    const matchTask = t.task && String(t.task).toLowerCase().includes(lowerQuery);
+                    const matchOwner = t.owner && String(t.owner).toLowerCase().includes(lowerQuery);
+                    const matchTeam = t.team && String(t.team).toLowerCase().includes(lowerQuery);
+                    const matchProject = t.project && String(t.project).toLowerCase().includes(lowerQuery);
+                    const matchNotes = t.notes && String(t.notes).toLowerCase().includes(lowerQuery);
+                    return matchTask || matchOwner || matchTeam || matchProject || matchNotes;
+                });
+            }
         }
 
         const sorted = ganttTasks.sort((a, b) => new Date(getStartDate(a.date, a.duration)) - new Date(getStartDate(b.date, b.duration)));
@@ -196,12 +226,21 @@ const GanttView = ({
                         <input type="checkbox" id="toggleDeps" checked={showDependencies} onChange={(e) => setShowDependencies(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
                         <label htmlFor="toggleDeps" className="cursor-pointer select-none">顯示連線 (Beta)</label>
                     </div>
-                    <div className="text-xs text-slate-500 flex gap-2">
-                        {TEAMS.map(t => (
-                            <span key={t} onClick={() => setGanttFilterTeam(prev => prev === t ? 'All' : t)}
-                                className={`inline-flex items-center cursor-pointer px-2 py-1 rounded transition-colors ${ganttFilterTeam === 'All' || ganttFilterTeam === t ? 'bg-indigo-100 text-indigo-700 font-bold' : 'bg-slate-100 text-slate-400'}`}>
-                                {t}
-                            </span>
+                    <div className="flex gap-2 flex-wrap">
+                        {console.log('📊 Gantt TEAMS:', TEAMS) || TEAMS.map(t => (
+                            <button
+                                key={t}
+                                onClick={() => {
+                                    console.log('🔘 點擊 Team:', t, '目前篩選:', ganttFilterTeam);
+                                    setGanttFilterTeam(prev => prev === t ? 'All' : t);
+                                }}
+                                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${ganttFilterTeam === 'All' || ganttFilterTeam === t
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                            >
+                                {t || '(無名稱)'}
+                            </button>
                         ))}
                     </div>
                 </div>

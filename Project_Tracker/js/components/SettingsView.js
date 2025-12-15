@@ -84,8 +84,8 @@ const SettingsView = ({ apiUrl }) => {
                         <button
                             onClick={() => setActiveTab('teams')}
                             className={`px-6 py-3 text-sm font-medium transition ${activeTab === 'teams'
-                                    ? 'text-indigo-600 border-b-2 border-indigo-600'
-                                    : 'text-slate-600 hover:text-slate-800'
+                                ? 'text-indigo-600 border-b-2 border-indigo-600'
+                                : 'text-slate-600 hover:text-slate-800'
                                 }`}
                         >
                             Teams (部門)
@@ -93,8 +93,8 @@ const SettingsView = ({ apiUrl }) => {
                         <button
                             onClick={() => setActiveTab('projects')}
                             className={`px-6 py-3 text-sm font-medium transition ${activeTab === 'projects'
-                                    ? 'text-indigo-600 border-b-2 border-indigo-600'
-                                    : 'text-slate-600 hover:text-slate-800'
+                                ? 'text-indigo-600 border-b-2 border-indigo-600'
+                                : 'text-slate-600 hover:text-slate-800'
                                 }`}
                         >
                             Projects (專案)
@@ -102,8 +102,8 @@ const SettingsView = ({ apiUrl }) => {
                         <button
                             onClick={() => setActiveTab('owners')}
                             className={`px-6 py-3 text-sm font-medium transition ${activeTab === 'owners'
-                                    ? 'text-indigo-600 border-b-2 border-indigo-600'
-                                    : 'text-slate-600 hover:text-slate-800'
+                                ? 'text-indigo-600 border-b-2 border-indigo-600'
+                                : 'text-slate-600 hover:text-slate-800'
                                 }`}
                         >
                             Owners (負責人)
@@ -169,7 +169,8 @@ const TeamsManager = ({ teams, apiUrl, onReload }) => {
         const teamData = {
             teamName: formData.get('teamName'),
             deptCode: formData.get('deptCode'),
-            isActive: formData.get('isActive') === 'on'
+            isActive: formData.get('isActive') === 'on',
+            apiKey: API_KEY  // 🔐 權限驗證
         };
 
         if (editingItem) {
@@ -201,7 +202,7 @@ const TeamsManager = ({ teams, apiUrl, onReload }) => {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'deleteTeam', data: { id } })
+                body: JSON.stringify({ action: 'deleteTeam', data: { id, apiKey: API_KEY } })
             });
 
             console.log('✅ 刪除 Team 成功');
@@ -401,7 +402,8 @@ const ProjectsManager = ({ projects, apiUrl, onReload }) => {
         const projectData = {
             projectName: formData.get('projectName'),
             status: formData.get('status'),
-            description: formData.get('description') || ''
+            description: formData.get('description') || '',
+            apiKey: API_KEY  // 🔐 權限驗證
         };
 
         if (editingItem) {
@@ -432,7 +434,7 @@ const ProjectsManager = ({ projects, apiUrl, onReload }) => {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'deleteProject', data: { id } })
+                body: JSON.stringify({ action: 'deleteProject', data: { id, apiKey: API_KEY } })
             });
 
             console.log('✅ 刪除 Project 成功');
@@ -624,7 +626,8 @@ const OwnersManager = ({ owners, apiUrl, onReload }) => {
         const ownerData = {
             ownerName: formData.get('ownerName'),
             email: formData.get('email') || '',
-            isActive: formData.get('isActive') === 'on'
+            isActive: formData.get('isActive') === 'on',
+            apiKey: API_KEY  // 🔐 權限驗證
         };
 
         if (editingItem) {
@@ -655,7 +658,7 @@ const OwnersManager = ({ owners, apiUrl, onReload }) => {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'deleteOwner', data: { id } })
+                body: JSON.stringify({ action: 'deleteOwner', data: { id, apiKey: API_KEY } })
             });
 
             console.log('✅ 刪除 Owner 成功');

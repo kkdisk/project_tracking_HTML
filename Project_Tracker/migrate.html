@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>資料遷移工具 - Project Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/config.js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <div id="app"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        const MigrationTool = () => {
+            const [step, setStep] = useState(1);
+            const [transformedData, setTransformedData] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [progress, setProgress] = useState(0);
+            const [log, setLog] = useState([]);
+            const [conflicts, setConflicts] = useState([]);
+            const [stats, setStats] = useState({ total: 0, success: 0, failed: 0, skipped: 0 });
+
+            const OLD_API = 'https://script.google.com/macros/s/AKfycbwJlnYQmCqnQlfl5cGnHc9NLqsu0A7TMkAFXE78KpkylJ0dNbwjw-qN3Faaop3Yr-sn/exec';
+
+            const categoryToTeam = {
+                'Mechanism': '機構',
+                'Software': '軟體',
+                'Electrical': '電控',
+                'Flow': '流道',
+                'QA': 'QA',
+                'Design': '晶片'
+            };
+
+            const statusMap = {
+                'InProgress': 'In Progress',
+                'Todo': 'Todo',
+                'Done': 'Done',
+                'Closed': 'Closed'
+            };
+
+            const calculateStartDate = (endDate, duration) => {
+                const date = new Date(endDate);
+                date.setDate(date.getDate() - duration);
+                return date.toISOString().split('T')[0];
+            };
+
+            const transformTask = (oldTask) => {
+                const date = new Date(oldTask.date).toISOString().split('T')[0];
+                const startDate = calculateStartDate(date, oldTask.duration);
+
+                return {
+                    id: oldTask.id,
+                    legacy_id: '',
+                    team: categoryToTeam[oldTask.category] || oldTask.category,
+                    project: oldTask.project,
+                    purpose: '',
+                    task: oldTask.task,
+                    owner: oldTask.owner,
+                    issueDate: '',
+                    startDate: startDate,
+                    date: date,
+                    duration: oldTask.duration,
+                    status: statusMap[oldTask.status] || oldTask.status,
+                    priority: oldTask.priority,
+                    dependency: oldTask.dependency || '',
+                    verification: '',
+                    notes: oldTask.notes || '',
+                    isCheckpoint: oldTask.isCheckpoint,
+                    issuePool: false,
+                    impact: 'Medium',
+                    risk: 'Low',
+                    urgency: 'Medium',
+                    category: oldTask.category
+                };
+            };
+
+            // 手動載入 JSON（繞過 CORS）
+            const loadDataFromJSON = (jsonText) => {
+                setLoading(true);
+                addLog('開始解析 JSON 資料...');
+
+                try {
+                    const data = JSON.parse(jsonText);
+
+                    if (!Array.isArray(data)) {
+                        throw new Error('JSON 格式錯誤：應該是陣列');
+                    }
+
+                    addLog(`✅ 成功載入 ${data.length} 筆資料`);
+
+                    const transformed = data.map(transformTask);
+                    setTransformedData(transformed);
+                    addLog(`✅ 資料轉換完成`);
+
+                    checkConflicts(transformed);
+
+                    setStep(2);
+                } catch (error) {
+                    addLog(`❌ 解析失敗: ${error.message}`, 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const checkConflicts = async (data) => {
+                addLog('檢查 ID 衝突...');
+                try {
+                    const response = await fetch(API_URL);
+                    const result = await response.json();
+
+                    if (result.success && result.data) {
+                        const existingIds = new Set(result.data.map(t => t.id));
+                        const conflictIds = data.filter(t => existingIds.has(t.id));
+
+                        setConflicts(conflictIds);
+
+                        if (conflictIds.length > 0) {
+                            addLog(`⚠️ 發現 ${conflictIds.length} 筆 ID 衝突`, 'warning');
+                        } else {
+                            addLog(`✅ 無 ID 衝突`);
+                        }
+                    }
+                } catch (error) {
+                    addLog(`⚠️ 衝突檢查失敗: ${error.message}`, 'warning');
+                }
+            };
+
+            const executeImport = async () => {
+                setLoading(true);
+                setStep(3);
+                addLog('開始匯入資料...');
+
+                const importStats = { total: transformedData.length, success: 0, failed: 0, skipped: 0 };
+                const conflictIdSet = new Set(conflicts.map(c => c.id));
+
+                for (let i = 0; i < transformedData.length; i++) {
+                    const task = transformedData[i];
+                    setProgress(Math.round((i / transformedData.length) * 100));
+
+                    if (conflictIdSet.has(task.id)) {
+                        importStats.skipped++;
+                        addLog(`⏭️ 跳過衝突 ID: ${task.id} - ${task.task}`, 'warning');
+                        continue;
+                    }
+
+                    try {
+                        const response = await fetch(API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'addTask',
+                                apiKey: API_KEY,
+                                ...task
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            importStats.success++;
+                            addLog(`✅ [${i + 1}/${transformedData.length}] ${task.task}`);
+                        } else {
+                            importStats.failed++;
+                            addLog(`❌ [${i + 1}/${transformedData.length}] ${task.task}: ${result.error}`, 'error');
+                        }
+                    } catch (error) {
+                        importStats.failed++;
+                        addLog(`❌ [${i + 1}/${transformedData.length}] ${task.task}: ${error.message}`, 'error');
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                setProgress(100);
+                setStats(importStats);
+                setLoading(false);
+                addLog(`\n📊 匯入完成！總計: ${importStats.total}, 成功: ${importStats.success}, 失敗: ${importStats.failed}, 跳過: ${importStats.skipped}`);
+            };
+
+            const addLog = (message, type = 'info') => {
+                const timestamp = new Date().toLocaleTimeString('zh-TW');
+                setLog(prev => [...prev, { time: timestamp, message, type }]);
+            };
+
+            return (
+                <div className="container mx-auto px-4 py-8 max-w-6xl">
+                    <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
+                                    <span>🔄</span>
+                                    資料遷移工具
+                                </h1>
+                                <p className="text-slate-600 mt-2">從舊 API 遷移資料到 Project Tracker</p>
+                            </div>
+                            <a href="index.html" className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors">
+                                返回主頁
+                            </a>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                        <div className="flex items-center justify-between">
+                            {[
+                                { num: 1, label: '載入資料', icon: '📥' },
+                                { num: 2, label: '預覽確認', icon: '👁️' },
+                                { num: 3, label: '執行匯入', icon: '⚡' }
+                            ].map((s, i) => (
+                                <div key={s.num} className="flex items-center flex-1">
+                                    <div className={`flex flex-col items-center ${step >= s.num ? 'opacity-100' : 'opacity-40'}`}>
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${step > s.num ? 'bg-green-500 text-white' :
+                                                step === s.num ? 'bg-indigo-600 text-white' :
+                                                    'bg-slate-200 text-slate-500'
+                                            }`}>
+                                            {step > s.num ? '✓' : s.icon}
+                                        </div>
+                                        <span className="mt-2 text-sm font-medium text-slate-700">{s.label}</span>
+                                    </div>
+                                    {i < 2 && (
+                                        <div className={`flex-1 h-1 mx-4 ${step > s.num ? 'bg-green-500' : 'bg-slate-200'}`}></div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Step 1 */}
+                    {step === 1 && (
+                        <div className="bg-white rounded-xl shadow-lg p-8">
+                            <div className="text-center mb-6">
+                                <div className="text-6xl mb-4">📥</div>
+                                <h2 className="text-2xl font-bold text-slate-800 mb-2">載入舊資料</h2>
+                                <p className="text-slate-600">請從舊 API 複製 JSON 數據並貼到下方</p>
+                            </div>
+
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                                <h3 className="font-bold text-blue-900 mb-2">📝 操作步驟：</h3>
+                                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                                    <li>打開舊 API：<a href={OLD_API} target="_blank" className="underline text-blue-600">點擊這裡</a></li>
+                                    <li>複製整個 JSON 數據（從 <code className="bg-blue-100 px-1">[</code> 到 <code className="bg-blue-100 px-1">]</code>）</li>
+                                    <li>貼到下方文本框</li>
+                                    <li>點擊「開始解析」</li>
+                                </ol>
+                            </div>
+
+                            <textarea
+                                id="jsonInput"
+                                className="w-full h-64 p-4 border-2 border-slate-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                placeholder='貼上 JSON 數據，例如:\n[\n  {"id": 123, "project": "Machine", "task": "...", ...},\n  ...\n]'
+                            ></textarea>
+
+                            <button
+                                onClick={() => {
+                                    const jsonText = document.getElementById('jsonInput').value;
+                                    if (!jsonText.trim()) {
+                                        alert('請先貼上 JSON 數據');
+                                        return;
+                                    }
+                                    loadDataFromJSON(jsonText);
+                                }}
+                                disabled={loading}
+                                className={`mt-4 w-full px-8 py-3 rounded-lg font-bold text-white transition-all ${loading ? 'bg-slate-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg'
+                                    }`}
+                            >
+                                {loading ? '解析中...' : '開始解析'}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Step 2 */}
+                    {step === 2 && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <div className="text-sm text-blue-600 font-medium">總筆數</div>
+                                    <div className="text-3xl font-bold text-blue-700">{transformedData.length}</div>
+                                </div>
+                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                                    <div className="text-sm text-orange-600 font-medium">ID 衝突</div>
+                                    <div className="text-3xl font-bold text-orange-700">{conflicts.length}</div>
+                                </div>
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                    <div className="text-sm text-green-600 font-medium">可匯入</div>
+                                    <div className="text-3xl font-bold text-green-700">{transformedData.length - conflicts.length}</div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-lg p-6">
+                                <h3 className="text-lg font-bold text-slate-800 mb-4">資料預覽（前 10 筆）</h3>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-slate-50">
+                                            <tr>
+                                                <th className="px-4 py-2 text-left">ID</th>
+                                                <th className="px-4 py-2 text-left">Team</th>
+                                                <th className="px-4 py-2 text-left">Project</th>
+                                                <th className="px-4 py-2 text-left">Task</th>
+                                                <th className="px-4 py-2 text-left">Owner</th>
+                                                <th className="px-4 py-2 text-left">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {transformedData.slice(0, 10).map((task, i) => {
+                                                const isConflict = conflicts.some(c => c.id === task.id);
+                                                return (
+                                                    <tr key={i} className={isConflict ? 'bg-orange-50' : 'hover:bg-slate-50'}>
+                                                        <td className="px-4 py-2 text-xs">{task.id}</td>
+                                                        <td className="px-4 py-2">{task.team}</td>
+                                                        <td className="px-4 py-2">{task.project}</td>
+                                                        <td className="px-4 py-2">{task.task}</td>
+                                                        <td className="px-4 py-2">{task.owner}</td>
+                                                        <td className="px-4 py-2">{task.status}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 justify-center">
+                                <button
+                                    onClick={() => setStep(1)}
+                                    className="px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition-colors"
+                                >
+                                    重新載入
+                                </button>
+                                <button
+                                    onClick={executeImport}
+                                    disabled={loading}
+                                    className={`px-8 py-3 rounded-lg font-bold text-white transition-all ${loading ? 'bg-slate-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 hover:shadow-lg'
+                                        }`}
+                                >
+                                    確認並執行匯入
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 3 */}
+                    {step === 3 && (
+                        <div className="space-y-6">
+                            <div className="bg-white rounded-xl shadow-lg p-6">
+                                <h3 className="text-lg font-bold text-slate-800 mb-4">匯入進度</h3>
+                                <div className="mb-4">
+                                    <div className="flex justify-between text-sm text-slate-600 mb-2">
+                                        <span>進度</span>
+                                        <span>{progress}%</span>
+                                    </div>
+                                    <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-300"
+                                            style={{ width: `${progress}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                {!loading && progress === 100 && (
+                                    <div className="grid grid-cols-4 gap-4 mt-6">
+                                        <div className="text-center p-4 bg-blue-50 rounded-lg">
+                                            <div className="text-2xl font-bold text-blue-700">{stats.total}</div>
+                                            <div className="text-sm text-blue-600">總計</div>
+                                        </div>
+                                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                                            <div className="text-2xl font-bold text-green-700">{stats.success}</div>
+                                            <div className="text-sm text-green-600">成功</div>
+                                        </div>
+                                        <div className="text-center p-4 bg-red-50 rounded-lg">
+                                            <div className="text-2xl font-bold text-red-700">{stats.failed}</div>
+                                            <div className="text-sm text-red-600">失敗</div>
+                                        </div>
+                                        <div className="text-center p-4 bg-orange-50 rounded-lg">
+                                            <div className="text-2xl font-bold text-orange-700">{stats.skipped}</div>
+                                            <div className="text-sm text-orange-600">跳過</div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {!loading && progress === 100 && (
+                                <div className="text-center">
+                                    <a
+                                        href="index.html"
+                                        className="inline-block px-8 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 hover:shadow-lg transition-all"
+                                    >
+                                        前往 Project Tracker 查看
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Log Console */}
+                    {log.length > 0 && (
+                        <div className="bg-slate-900 rounded-xl shadow-lg p-6 mt-6">
+                            <h3 className="text-lg font-bold text-white mb-4">執行日誌</h3>
+                            <div className="bg-black rounded-lg p-4 h-64 overflow-y-auto font-mono text-sm">
+                                {log.map((entry, i) => (
+                                    <div key={i} className={`mb-1 ${entry.type === 'error' ? 'text-red-400' :
+                                            entry.type === 'warning' ? 'text-yellow-400' :
+                                                'text-green-400'
+                                        }`}>
+                                        <span className="text-slate-500">[{entry.time}]</span> {entry.message}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<MigrationTool />, document.getElementById('app'));
+    </script>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+
+</html>

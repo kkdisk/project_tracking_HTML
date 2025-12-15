@@ -48,6 +48,73 @@ function onEdit(e) {
   }
 }
 
+// ==================== 🔐 API Key 驗證與授權 ====================
+
+/**
+ * 有效的 API Keys
+ * 定期更換以確保安全性
+ */
+const VALID_API_KEYS = [
+    'cytesi-admin-2025-Q1',      // Admin Key - 完整權限
+    'cytesi-editor-2025-Q1',     // Editor Key - 可編輯任務
+    'cytesi-viewer-2025-Q1'      // Viewer Key - 僅查看
+];
+
+/**
+ * API Key 對應的權限層級
+ */
+const API_KEY_PERMISSIONS = {
+    'cytesi-admin-2025-Q1': 'admin',
+    'cytesi-editor-2025-Q1': 'editor',
+    'cytesi-viewer-2025-Q1': 'viewer'
+};
+
+/**
+ * 驗證 API Key
+ * @param {string} apiKey - 從請求中傳來的 API Key
+ * @returns {Object} {valid: boolean, permission: string}
+ */
+function validateApiKey(apiKey) {
+    if (!apiKey) {
+        Logger.log('⚠️ API Key missing');
+        return { valid: false, permission: 'guest' };
+    }
+    
+    if (VALID_API_KEYS.indexOf(apiKey) !== -1) {
+        const permission = API_KEY_PERMISSIONS[apiKey] || 'viewer';
+        Logger.log('✅ API Key valid: ' + permission);
+        return {
+            valid: true,
+            permission: permission
+        };
+    }
+    
+    Logger.log('❌ API Key invalid: ' + apiKey);
+    return { valid: false, permission: 'guest' };
+}
+
+/**
+ * 權限檢查
+ * @param {string} requiredPermission - 所需權限層級
+ * @param {string} userPermission - 用戶當前權限
+ * @returns {boolean}
+ */
+function hasPermission(requiredPermission, userPermission) {
+    const hierarchy = {
+        'admin': 3,
+        'editor': 2,
+        'viewer': 1,
+        'guest': 0
+    };
+    
+    const required = hierarchy[requiredPermission] || 0;
+    const current = hierarchy[userPermission] || 0;
+    
+    return current >= required;
+}
+
+
+
 
 // ==================== Task ID 生成 ====================
 const DEPT_CODES = {
@@ -115,7 +182,47 @@ function getNextSequence(deptCode, year, month) {
   return 1;
 }
 
+// ==================== 輔助函數 ====================
+
+/**
+ * 創建帶有 CORS 標頭的 JSON 響應
+ * @param {Object} data - 響應數據
+ * @param {number} statusCode - HTTP 狀態碼（可選）
+ * @returns {TextOutput} ContentService 輸出對象
+ */
+function createJsonResponse(data, statusCode) {
+  const output = ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader('Access-Control-Allow-Origin', '*')
+    .setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // 可選：設置 HTTP 狀態碼（但 Apps Script 對此支援有限）
+  if (statusCode) {
+    Logger.log(`⚠️ HTTP Status Code ${statusCode} (僅供記錄，Apps Script 無法直接設置)`);
+  }
+  
+  return output;
+}
+
 // ==================== API端點 ====================
+
+
+/**
+ * 處理 CORS Preflight 請求
+ * 瀏覽器在發送 POST 請求前會先發送 OPTIONS 請求
+ */
+function doOptions(e) {
+  return ContentService
+    .createTextOutput('')
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader('Access-Control-Allow-Origin', '*')
+    .setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    .setHeader('Access-Control-Max-Age', '86400'); // 24小時
+}
+
 function doGet(e) {
   try {
     const action = e.parameter.action || 'read';
@@ -182,7 +289,7 @@ function doPost(e) {
       return createJsonResponse(updateTeam(payload));
     }
     if (action === 'deleteTeam') {
-      return createJsonResponse(deleteTeam(payload.id));
+      return createJsonResponse(deleteTeam(payload));  // ✅ 傳遞整個 payload（含 id 和 apiKey）
     }
     
     // Projects API
@@ -250,6 +357,17 @@ function getTeams() {
 }
 
 function addTeam(teamData) {
+  // 🔐 權限檢查
+  const apiKey = teamData.apiKey;
+  const auth = validateApiKey(apiKey);
+  
+  if (!hasPermission('admin', auth.permission)) {
+    return {
+      success: false,
+      error: '權限不足：需要管理員權限才能新增 Team'
+    };
+  }
+  
   const sheet = getSettingsSheet(SETTINGS_TEAMS_SHEET);
   const lastRow = sheet.getLastRow();
   const newId = lastRow > 0 ? lastRow : 1;
@@ -287,6 +405,17 @@ function addTeam(teamData) {
 }
 
 function updateTeam(teamData) {
+  // 🔐 權限檢查
+  const apiKey = teamData.apiKey;
+  const auth = validateApiKey(apiKey);
+  
+  if (!hasPermission('admin', auth.permission)) {
+    return {
+      success: false,
+      error: '權限不足：需要管理員權限才能更新 Team'
+    };
+  }
+  
   const sheet = getSettingsSheet(SETTINGS_TEAMS_SHEET);
   const data = sheet.getDataRange().getValues();
   
@@ -319,12 +448,24 @@ function updateTeam(teamData) {
   throw new Error('找不到指定的 Team');
 }
 
-function deleteTeam(id) {
-  const sheet = getSettingsSheet(SETTINGS_TEAMS_SHEET);
-  const data = sheet.getDataRange().getValues();
+function deleteTeam(data) {
+  // 🔐 權限檢查
+  const apiKey = data.apiKey;
+  const auth = validateApiKey(apiKey);
   
-  for (let i = 1; i < data.length; i++) {
-    if (Number(data[i][0]) === Number(id)) {
+  if (!hasPermission('admin', auth.permission)) {
+    return {
+      success: false,
+      error: '權限不足：需要管理員權限才能刪除 Team'
+    };
+  }
+  
+  const id = data.id;
+  const sheet = getSettingsSheet(SETTINGS_TEAMS_SHEET);
+  const dataRange = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < dataRange.length; i++) {
+    if (Number(dataRange[i][0]) === Number(id)) {
       sheet.deleteRow(i + 1);
       Logger.log(`✅ 刪除 Team ID: ${id}`);
       return { success: true, message: '刪除成功' };
