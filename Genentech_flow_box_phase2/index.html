@@ -1238,12 +1238,14 @@
                                                     {/* 原始時程 - 半透明淺色背景 */}
                                                     {hasDateChange && (
                                                         <div
-                                                            className="gantt-bar opacity-30"
+                                                            className="gantt-bar"
                                                             style={{
                                                                 left: `${origLeft}px`,
                                                                 width: `${origWidth}px`,
-                                                                backgroundColor: '#94a3b8',
-                                                                border: '1px dashed #64748b'
+                                                                backgroundColor: 'rgba(148, 163, 184, 0.4)',
+                                                                border: '2px dashed #64748b',
+                                                                zIndex: 10,
+                                                                cursor: 'default'
                                                             }}
                                                             title={`原始規劃: ${originalDate} (${history[0].reason || '初始'})`}
                                                         />
