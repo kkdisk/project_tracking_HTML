@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genentech Project Tracker v6.9 (Hide Completed Tasks)</title>
+    <title>Genentech Project Tracker v7.1 (Dependency Conflict Warning)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -481,16 +481,36 @@
                         const data = await response.json();
 
                         if (Array.isArray(data) && data.length > 0) {
-                            const formatted = data.map(item => ({
-                                ...item,
-                                id: Number(item.id),
-                                duration: Number(item.duration),
-                                isCheckpoint: item.isCheckpoint === true || item.isCheckpoint === "TRUE",
-                                date: normalizeDate(item.date),
-                                dependency: item.dependency || '',
-                                notes: item.notes || '',
-                                category: item.category || 'Mechanism'
-                            }));
+                            const formatted = data.map(item => {
+                                const normalizedDate = normalizeDate(item.date);
+                                // 解析 dateHistory，若無則初始化
+                                let dateHistory = [];
+                                try {
+                                    dateHistory = item.dateHistory ? JSON.parse(item.dateHistory) : [];
+                                } catch (e) {
+                                    dateHistory = [];
+                                }
+                                // 若無歷史記錄，以當前 date 建立初始記錄
+                                if (dateHistory.length === 0 && normalizedDate) {
+                                    dateHistory = [{
+                                        date: normalizedDate,
+                                        changedAt: new Date().toISOString(),
+                                        reason: '初始規劃',
+                                        version: 1
+                                    }];
+                                }
+                                return {
+                                    ...item,
+                                    id: Number(item.id),
+                                    duration: Number(item.duration),
+                                    isCheckpoint: item.isCheckpoint === true || item.isCheckpoint === "TRUE",
+                                    date: normalizedDate,
+                                    dependency: item.dependency || '',
+                                    notes: item.notes || '',
+                                    category: item.category || 'Mechanism',
+                                    dateHistory: dateHistory // 已解析的陣列
+                                };
+                            });
                             setTasks(formatted);
                             setIsOffline(false);
                         } else {
@@ -754,19 +774,49 @@
                 e.preventDefault();
                 const fd = new FormData(e.target);
                 const defaultDate = getTaiwanToday();
+                const newDate = fd.get('date') || defaultDate;
+                const dateChangeReason = fd.get('dateChangeReason')?.trim() || '';
+
+                // 取得現有 dateHistory 或建立新的
+                let dateHistory = editingTask?.dateHistory || [];
+                if (!Array.isArray(dateHistory)) {
+                    try {
+                        dateHistory = JSON.parse(dateHistory);
+                    } catch (e) {
+                        dateHistory = [];
+                    }
+                }
+
+                // 偵測日期是否變更
+                const oldDate = editingTask?.date;
+                const isDateChanged = editingTask && oldDate !== newDate;
+                const isNewTask = !editingTask;
+
+                // 更新 dateHistory
+                if (isNewTask || isDateChanged) {
+                    dateHistory = [...dateHistory, {
+                        date: newDate,
+                        changedAt: new Date().toISOString(),
+                        reason: isNewTask ? '初始規劃' : (dateChangeReason || '日期調整'),
+                        version: dateHistory.length + 1
+                    }];
+                }
+
                 const newItem = {
                     id: editingTask?.id || Date.now(),
                     project: fd.get('project'),
                     category: fd.get('category'),
                     task: fd.get('task'),
                     owner: fd.get('owner'),
-                    date: fd.get('date') || defaultDate,
+                    date: newDate,
                     duration: parseInt(fd.get('duration') || 0),
                     isCheckpoint: fd.get('isCheckpoint') === 'on',
                     priority: fd.get('priority'),
                     status: fd.get('status'),
                     dependency: fd.get('dependency'),
-                    notes: fd.get('notes')
+                    notes: fd.get('notes'),
+                    dateHistory: dateHistory, // 本地使用陣列
+                    dateChangeReason: dateChangeReason // 傳給後端使用
                 };
                 const validationErrors = validateTask(newItem);
                 if (validationErrors.length > 0) { alert('驗證失敗:\n' + validationErrors.join('\n')); return; }
@@ -792,11 +842,16 @@
 
                 setIsModalOpen(false);
                 if (!isOffline) {
+                    // 準備傳送給後端的資料，dateHistory 需轉為 JSON 字串
+                    const apiData = {
+                        ...newItem,
+                        dateHistory: JSON.stringify(dateHistory)
+                    };
                     fetch(API_URL, {
                         method: 'POST',
                         mode: 'no-cors', // Google Apps Script 需要此設定
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'upsert', data: newItem })
+                        body: JSON.stringify({ action: 'upsert', data: apiData })
                     })
                         .then(() => console.log('✅ 儲存成功 (已發送至 Google Sheets)'))
                         .catch(err => {
@@ -909,6 +964,36 @@
                     return { sortedTasks: sorted, minDate: min, totalDays: days };
                 }, [tasks, ganttFilter, searchQuery]);
 
+                // 檢查任務是否有相依性衝突（前置任務完成日 > 此任務開始日）
+                const hasDependencyConflict = (task) => {
+                    if (!task.dependency) return { hasConflict: false, conflicts: [] };
+
+                    const depIds = parseDependencies(task.dependency);
+                    const taskStart = getStartDate(task.date, task.duration);
+                    const conflicts = [];
+
+                    for (const depId of depIds) {
+                        const parent = sortedTasks.find(p => String(p.id) === String(depId));
+                        if (!parent) continue;
+
+                        // 前置任務的完成日（date 就是完成日）
+                        const parentEnd = parent.date;
+
+                        // 如果前置任務完成日 >= 此任務開始日，表示衝突
+                        if (parentEnd >= taskStart) {
+                            conflicts.push({
+                                parentId: parent.id,
+                                parentTask: parent.task,
+                                parentEnd: parentEnd,
+                                taskStart: taskStart,
+                                overlapDays: Math.ceil((new Date(parentEnd) - new Date(taskStart)) / (1000 * 60 * 60 * 24)) + 1
+                            });
+                        }
+                    }
+
+                    return { hasConflict: conflicts.length > 0, conflicts };
+                };
+
                 const getLeftPos = (dStr) => {
                     const d = new Date(dStr);
                     const diff = Math.ceil((d - minDate) / (1000 * 60 * 60 * 24));
@@ -939,9 +1024,16 @@
                             const childX = getLeftPos(childStartStr);
                             const childY = taskIndex * ROW_HEIGHT + 20;
 
+                            // 檢查此相依關係是否有衝突
+                            const parentEnd = parent.date;
+                            const isConflict = parentEnd >= childStartStr;
+                            const strokeColor = isConflict ? '#dc2626' : '#94a3b8';
+                            const strokeWidth = isConflict ? 2.5 : 1.5;
+                            const markerEnd = isConflict ? 'url(#arrowhead-red)' : 'url(#arrowhead)';
+
                             const path = `M ${parentX} ${parentY} C ${parentX + 20} ${parentY}, ${childX - 20} ${childY}, ${childX} ${childY}`;
                             lines.push(
-                                <path key={`${parent.id}-${task.id}`} d={path} stroke="#94a3b8" strokeWidth="1.5" fill="none" markerEnd="url(#arrowhead)" />
+                                <path key={`${parent.id}-${task.id}`} d={path} stroke={strokeColor} strokeWidth={strokeWidth} fill="none" markerEnd={markerEnd} />
                             );
                         });
                     });
@@ -1092,6 +1184,9 @@
                                             <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
                                                 <polygon points="0 0, 6 2, 0 4" fill="#94a3b8" />
                                             </marker>
+                                            <marker id="arrowhead-red" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                                                <polygon points="0 0, 6 2, 0 4" fill="#dc2626" />
+                                            </marker>
                                         </defs>
                                         {drawDependencies()}
                                     </svg>
@@ -1103,15 +1198,70 @@
                                         const width = t.duration * PX_PER_DAY;
                                         const colorClass = t.project === 'PlanB' ? 'bg-emerald-500' : t.project === 'Machine' ? 'bg-purple-500' : 'bg-blue-500';
 
+                                        // 計算原始時程 (若有多筆歷史記錄)
+                                        const history = Array.isArray(t.dateHistory) ? t.dateHistory : [];
+                                        const originalDate = history.length > 0 ? history[0].date : null;
+                                        const hasDateChange = history.length > 1 && originalDate !== t.date;
+
+                                        // 檢查相依性衝突
+                                        const conflictInfo = hasDependencyConflict(t);
+                                        const hasConflict = conflictInfo.hasConflict;
+
+                                        // 原始時程位置與寬度
+                                        let origLeft = 0, origWidth = 0, delayDays = 0;
+                                        if (hasDateChange) {
+                                            const origStart = getStartDate(originalDate, t.duration);
+                                            origLeft = getLeftPos(origStart);
+                                            origWidth = t.duration * PX_PER_DAY;
+                                            // 計算延期天數
+                                            const origEndDate = new Date(originalDate);
+                                            const currEndDate = new Date(t.date);
+                                            delayDays = Math.round((currEndDate - origEndDate) / (1000 * 60 * 60 * 24));
+                                        }
+
                                         return (
-                                            <div key={t.id} className="gantt-row">
-                                                <div className="gantt-task-col truncate" title={t.task}>{t.task}</div>
+                                            <div key={t.id} className={`gantt-row ${hasConflict ? 'bg-red-50' : ''}`}>
+                                                <div className="gantt-task-col truncate" title={t.task}>
+                                                    {t.task}
+                                                    {hasDateChange && (
+                                                        <span className="ml-1 text-[9px] px-1 py-0.5 bg-red-100 text-red-600 rounded">
+                                                            +{delayDays}天
+                                                        </span>
+                                                    )}
+                                                    {hasConflict && (
+                                                        <span className="ml-1 text-[9px] px-1 py-0.5 bg-orange-500 text-white rounded" title={`相依衝突：前置任務 ${conflictInfo.conflicts.map(c => c.parentTask).join(', ')} 的完成日晚於此任務開始日`}>
+                                                            ⚠️ 衝突
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="gantt-timeline-col">
+                                                    {/* 原始時程 - 半透明淺色背景 */}
+                                                    {hasDateChange && (
+                                                        <div
+                                                            className="gantt-bar opacity-30"
+                                                            style={{
+                                                                left: `${origLeft}px`,
+                                                                width: `${origWidth}px`,
+                                                                backgroundColor: '#94a3b8',
+                                                                border: '1px dashed #64748b'
+                                                            }}
+                                                            title={`原始規劃: ${originalDate} (${history[0].reason || '初始'})`}
+                                                        />
+                                                    )}
+                                                    {/* 目前時程 */}
                                                     <div
                                                         className={`gantt-bar ${colorClass} ${t.status === 'Done' ? 'opacity-50 grayscale' : ''}`}
-                                                        style={{ left: `${left}px`, width: `${width}px` }}
+                                                        style={{
+                                                            left: `${left}px`,
+                                                            width: `${width}px`,
+                                                            // 相依性衝突時加紅色粗框
+                                                            ...(hasConflict ? {
+                                                                border: '3px solid #dc2626',
+                                                                boxShadow: '0 0 8px rgba(220, 38, 38, 0.5)'
+                                                            } : {})
+                                                        }}
                                                         onClick={() => { setEditingTask(t); setIsModalOpen(true); }}
-                                                        title={`${t.task} (${t.duration}天)`}
+                                                        title={`${t.task} (${t.duration}天)${history.length > 1 ? ` | 變更 ${history.length - 1} 次` : ''}${hasConflict ? ' | ⚠️ 相依衝突!' : ''}`}
                                                     >
                                                         {t.duration > 2 && <span className="text-[10px] pl-1">{t.owner}</span>}
                                                     </div>
@@ -1132,7 +1282,7 @@
                     <div className="bg-white border-b sticky top-0 z-30 shadow-sm px-6 py-4 flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             <div className="bg-indigo-600 text-white p-2 rounded-lg"><Icon path={paths.list} /></div>
-                            <h1 className="text-xl font-bold text-slate-800">Genentech Project Tracker <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">v6.9</span></h1>
+                            <h1 className="text-xl font-bold text-slate-800">Genentech Project Tracker <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">v7.1</span></h1>
                             {isLoading && <div className="flex items-center text-sm text-slate-500 gap-2 ml-4"><div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full spinner"></div> 載入中...</div>}
                             {isOffline && <div className="flex items-center text-sm text-red-500 gap-2 ml-4 bg-red-50 px-2 py-1 rounded"><Icon path={paths.alert} size={14} /> 離線</div>}
                             <div className="text-xs bg-slate-100 text-slate-500 px-3 py-1 rounded-full hidden sm:block ml-4 flex items-center gap-1">
@@ -1539,6 +1689,43 @@
                                                 <option value="Closed">關閉</option>
                                             </select>
                                         </div>
+
+                                        {/* 日期變更原因 - 僅編輯模式顯示 */}
+                                        {editingTask && (
+                                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                                <label className="block text-sm font-medium text-amber-800 mb-1">📅 日期變更原因 (若有調整完成日)</label>
+                                                <input
+                                                    name="dateChangeReason"
+                                                    placeholder="例如：等待零件、人力調度、需求變更..."
+                                                    className="w-full border border-amber-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white"
+                                                />
+                                                <p className="text-xs text-amber-600 mt-1">💡 若完成日有變更，請說明原因以便追蹤</p>
+                                            </div>
+                                        )}
+
+                                        {/* 日期變更歷史 */}
+                                        {editingTask?.dateHistory && editingTask.dateHistory.length > 0 && (
+                                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <label className="text-sm font-medium text-slate-700">📋 日期變更歷史</label>
+                                                    <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                                                        {editingTask.dateHistory.length} 筆記錄
+                                                    </span>
+                                                </div>
+                                                <div className="max-h-32 overflow-y-auto space-y-1">
+                                                    {editingTask.dateHistory.map((h, idx) => (
+                                                        <div key={idx} className="flex items-center gap-2 text-xs bg-white p-2 rounded border">
+                                                            <span className={`px-1.5 py-0.5 rounded ${idx === 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                                v{h.version || idx + 1}
+                                                            </span>
+                                                            <span className="font-mono text-slate-600">{h.date}</span>
+                                                            <span className="text-slate-400">|</span>
+                                                            <span className="text-slate-500 flex-1 truncate" title={h.reason}>{h.reason}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="flex items-center gap-3 pt-2 bg-slate-50 p-3 rounded-lg border">
                                             <div className="checkbox-container">
