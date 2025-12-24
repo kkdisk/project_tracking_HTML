@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genentech Project Tracker v6.4 (Enhanced)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React & ReactDOM -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+
+    <!-- Prop Types -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+
+    <!-- Recharts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.10.3/Recharts.min.js"></script>
+
+    <!-- Babel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #6366f1;
+        }
+
+        .toggle-checkbox:checked+.toggle-label {
+            background-color: #6366f1;
+        }
+
+        .checkbox-container {
+            position: relative;
+            width: 40px;
+            height: 24px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        .calendar-cell {
+            min-height: 100px;
+            transition: all 0.2s;
+        }
+
+        .calendar-cell:hover {
+            background-color: #f1f5f9;
+        }
+
+        /* --- Gantt Layout (Fixed) --- */
+        .gantt-container {
+            position: relative;
+            overflow: auto;
+            height: 100%;
+        }
+
+        .gantt-wrapper {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .gantt-header-row {
+            display: flex;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: #f8fafc;
+        }
+
+        .gantt-body {
+            overflow: auto;
+            flex: 1;
+        }
+
+        /* Headers */
+        .gantt-header-task {
+            position: sticky;
+            left: 0;
+            z-index: 40;
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: bold;
+            padding: 8px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            border-right: 1px solid #e2e8f0;
+            width: 200px;
+            flex-shrink: 0;
+        }
+
+        .gantt-header-timeline {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .gantt-header-wrapper {
+            display: flex;
+            width: max-content;
+        }
+
+        .gantt-header-month-row {
+            height: 30px;
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .gantt-header-day-row {
+            height: 30px;
+            display: flex;
+        }
+
+        .gantt-month-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #475569;
+            border-right: 1px solid #e2e8f0;
+            box-sizing: border-box;
+        }
+
+        .gantt-day-cell {
+            border-right: 1px solid #f1f5f9;
+            height: 100%;
+            text-align: center;
+            font-size: 0.7rem;
+            padding-top: 4px;
+            box-sizing: border-box;
+            color: #64748b;
+        }
+
+        .is-weekend {
+            background-color: #f8fafc;
+        }
+
+        /* Body */
+        .gantt-body-content {
+            position: relative;
+            width: max-content;
+            min-width: 100%;
+        }
+
+        /* Row (Crucial Fix: display: flex) */
+        .gantt-row {
+            display: flex;
+            height: 40px;
+            border-bottom: 1px solid #f1f5f9;
+            background-color: #fff;
+            position: relative;
+        }
+
+        .gantt-row:hover {
+            background-color: #f8fafc;
+        }
+
+        .gantt-task-col {
+            width: 200px;
+            flex-shrink: 0;
+            padding: 8px;
+            border-right: 1px solid #e2e8f0;
+            font-size: 0.875rem;
+            background: #fff;
+            position: sticky;
+            left: 0;
+            z-index: 35;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            box-shadow: 1px 0 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .gantt-row:hover .gantt-task-col {
+            background-color: #f8fafc;
+        }
+
+        .gantt-timeline-col {
+            position: relative;
+            flex: 1;
+            height: 40px;
+        }
+
+        /* Grid Lines */
+        .gantt-grid-lines {
+            position: absolute;
+            top: 0;
+            left: 200px;
+            bottom: 0;
+            display: flex;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .gantt-grid-col {
+            border-right: 1px solid #f1f5f9;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Bars */
+        .gantt-bar {
+            position: absolute;
+            height: 24px;
+            top: 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+            z-index: 20;
+        }
+
+        .gantt-bar:hover {
+            opacity: 0.9;
+            transform: scaleY(1.05);
+            z-index: 25;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Today Line */
+        .today-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #ef4444;
+            z-index: 15;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        /* SVG */
+        .dependency-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Tooltip style */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 50;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            pointer-events: none;
+            white-space: normal;
+        }
+
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } = window.Recharts || {};
+
+        const API_URL = "https://script.google.com/macros/s/AKfycbwJlnYQmCqnQlfl5cGnHc9NLqsu0A7TMkAFXE78KpkylJ0dNbwjw-qN3Faaop3Yr-sn/exec";
+        const PX_PER_DAY = 40;
+        const ROW_HEIGHT = 40;
+
+        // --- Improved Date Helpers ---
+        const getTaiwanToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+
+        const normalizeDate = (dateStr) => {
+            if (!dateStr) return '';
+            // Regex check for YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+            try {
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return '';
+                return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+            } catch (e) { return ''; }
+        };
+
+        const getStartDate = (endDateStr, duration) => {
+            if (!duration || !endDateStr) return '';
+            try {
+                const end = new Date(endDateStr);
+                const start = new Date(end);
+                start.setDate(end.getDate() - duration);
+                return start.toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+            } catch (e) { return ''; }
+        };
+
+        // --- Icons ---
+        const Icon = ({ path, size = 18, color = "currentColor", onClick, className = "" }) => (
+            <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+                {path}
+            </svg>
+        );
+
+        const paths = {
+            flag: <React.Fragment><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" /></React.Fragment>,
+            clock: <React.Fragment><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></React.Fragment>,
+            calendar: <React.Fragment><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></React.Fragment>,
+            list: <React.Fragment><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></React.Fragment>,
+            plus: <React.Fragment><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></React.Fragment>,
+            trash: <React.Fragment><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></React.Fragment>,
+            edit: <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />,
+            x: <React.Fragment><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></React.Fragment>,
+            alert: <React.Fragment><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></React.Fragment>,
+            check: <React.Fragment><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></React.Fragment>,
+            timer: <React.Fragment><line x1="10" y1="2" x2="14" y2="2" /><line x1="12" y1="14" x2="15" y2="11" /><circle cx="12" cy="14" r="8" /></React.Fragment>,
+            left: <polyline points="15 18 9 12 15 6" />,
+            right: <polyline points="9 18 15 12 9 6" />,
+            file: <React.Fragment><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></React.Fragment>,
+            link: <React.Fragment><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></React.Fragment>,
+            gantt: <React.Fragment><path d="M12 2v20" /><path d="M2 6h20" /><path d="M6 10h8" /><path d="M4 14h12" /><path d="M8 18h10" /></React.Fragment>,
+            settings: <React.Fragment><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></React.Fragment>
+        };
+
+        const INITIAL_DATA = [
+            { id: 1, project: 'PlanB', category: 'Flow', task: '架構確認', owner: 'Anting', date: '2025-12-12', status: 'Done', priority: 'High', duration: 3, isCheckpoint: true, dependency: '', notes: '' }
+        ];
+
+        const CATEGORIES = ['Mechanism', 'Electrical', 'Software', 'QA', 'Design', 'Flow'];
+        const PROJECTS = ['PlanB', 'Machine', 'Chip'];
+        const OWNERS = ['Anting', '宗轅', 'Jerry', '子宗', 'Jun', '慶德', 'HW', 'EE', 'RD', 'QA', 'SW', 'All', 'Unassigned'];
+
+        const App = () => {
+            const [tasks, setTasks] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            const [isOffline, setIsOffline] = useState(false);
+            const [viewMode, setViewMode] = useState('dashboard');
+            const [filterProject, setFilterProject] = useState('All');
+            const [filterStat, setFilterStat] = useState(null);
+            const [ganttFilter, setGanttFilter] = useState('All');
+            const [showDependencies, setShowDependencies] = useState(false);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingTask, setEditingTask] = useState(null);
+            const [apiError, setApiError] = useState(null);
+
+            const [todayStr, setTodayStr] = useState('');
+            const [calendarMonth, setCalendarMonth] = useState(new Date());
+
+            useEffect(() => {
+                setTodayStr(getTaiwanToday());
+                setCalendarMonth(new Date());
+            }, []);
+
+            useEffect(() => {
+                setIsLoading(true);
+                const fetchData = async () => {
+                    try {
+                        setApiError(null);
+                        const controller = new AbortController();
+                        const id = setTimeout(() => controller.abort(), 8000);
+                        const response = await fetch(API_URL, { signal: controller.signal });
+                        clearTimeout(id);
+                        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+                        const data = await response.json();
+
+                        if (Array.isArray(data) && data.length > 0) {
+                            const formatted = data.map(item => ({
+                                ...item,
+                                id: Number(item.id),
+                                duration: Number(item.duration),
+                                isCheckpoint: item.isCheckpoint === true || item.isCheckpoint === "TRUE",
+                                date: normalizeDate(item.date),
+                                dependency: item.dependency || '',
+                                notes: item.notes || '',
+                                category: item.category || 'Mechanism'
+                            }));
+                            setTasks(formatted);
+                            setIsOffline(false);
+                        } else {
+                            setTasks(INITIAL_DATA);
+                            setIsOffline(false);
+                        }
+                    } catch (err) {
+                        console.error("API Error:", err);
+                        let errorMsg = '未知錯誤';
+
+                        if (err.name === 'AbortError') {
+                            errorMsg = '連線逾時 (超過8秒)';
+                        } else if (err.message.includes('Failed to fetch')) {
+                            errorMsg = '網路連線失敗，請檢查網路';
+                        } else if (err.message.includes('HTTP Error')) {
+                            errorMsg = `伺服器錯誤: ${err.message}`;
+                        } else {
+                            errorMsg = err.message;
+                        }
+
+                        setApiError(errorMsg);
+
+                        // 嘗試從本地儲存讀取備份
+                        const backup = localStorage.getItem('tasks_backup');
+                        if (backup) {
+                            try {
+                                const backupTasks = JSON.parse(backup);
+                                const backupTime = localStorage.getItem('tasks_backup_time');
+                                setTasks(backupTasks);
+                                setApiError(`${errorMsg} - 使用本地備份 (${new Date(backupTime).toLocaleString('zh-TW')})`);
+                            } catch (e) {
+                                setTasks(INITIAL_DATA);
+                            }
+                        } else {
+                            setTasks(INITIAL_DATA);
+                        }
+                        setIsOffline(true);
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                fetchData();
+            }, []);
+
+            const stats = useMemo(() => {
+                if (!todayStr) return { total: 0, checkpoints: 0, pendingHigh: 0, completed: 0, lateStart: 0, delayed: 0 };
+                const baseTasks = tasks.filter(t => filterProject === 'All' || t.project === filterProject);
+                return {
+                    total: baseTasks.length,
+                    checkpoints: baseTasks.filter(t => t.isCheckpoint).length,
+                    pendingHigh: baseTasks.filter(t => t.priority === 'High' && t.status !== 'Done').length,
+                    completed: baseTasks.filter(t => t.status === 'Done').length,
+                    lateStart: baseTasks.filter(t => {
+                        const startDate = getStartDate(t.date, t.duration);
+                        return t.status === 'Todo' && startDate <= todayStr && t.date >= todayStr;
+                    }).length,
+                    delayed: baseTasks.filter(t => t.status === 'Delayed').length
+                };
+            }, [tasks, todayStr, filterProject]);
+
+            const filteredTasks = useMemo(() => {
+                const filterFunctions = {
+                    'Checkpoints': (t) => t.isCheckpoint,
+                    'Urgent': (t) => t.status !== 'Done' && t.priority === 'High',
+                    'Completed': (t) => t.status === 'Done',
+                    'LateStart': (t) => {
+                        const startDate = getStartDate(t.date, t.duration);
+                        return t.status === 'Todo' && startDate <= todayStr && t.date >= todayStr;
+                    },
+                    'Delayed': (t) => t.status === 'Delayed'
+                };
+
+                let result = tasks.filter(t =>
+                    filterProject === 'All' || t.project === filterProject
+                );
+
+                if (filterStat && filterFunctions[filterStat]) {
+                    result = result.filter(filterFunctions[filterStat]);
+                }
+
+                return result;
+            }, [tasks, filterProject, filterStat, todayStr]);
+
+            const alerts = useMemo(() => {
+                if (!todayStr) return [];
+                const list = [];
+                const overdueCount = tasks.filter(t => t.date < todayStr && t.status !== 'Done').length;
+                if (overdueCount > 0) list.push({ type: 'danger', msg: `有 ${overdueCount} 個任務已逾期` });
+                if (apiError) list.push({ type: 'warning', msg: `系統離線中 (${apiError})` });
+                return list;
+            }, [tasks, todayStr, apiError]);
+
+            const calendarDays = useMemo(() => {
+                const year = calendarMonth.getFullYear();
+                const month = calendarMonth.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const days = [];
+                for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+                for (let i = 1; i <= lastDay.getDate(); i++) {
+                    const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                    days.push({ date: i, fullDate: dStr, tasks: tasks.filter(t => t.date === dStr) });
+                }
+                return days;
+            }, [calendarMonth, tasks]);
+
+            const validateTask = (task) => {
+                const errors = [];
+
+                // 任務名稱驗證
+                if (!task.task?.trim()) {
+                    errors.push('❌ 任務名稱不能為空');
+                } else if (task.task.length > 100) {
+                    errors.push('❌ 任務名稱不能超過100字元');
+                }
+
+                // 日期驗證
+                const normalizedDate = normalizeDate(task.date);
+                if (!task.date || !normalizedDate) {
+                    errors.push('❌ 完成日期格式不正確');
+                } else {
+                    const taskDate = new Date(normalizedDate);
+                    const startDate = new Date(getStartDate(normalizedDate, task.duration));
+
+                    if (startDate > taskDate) {
+                        errors.push('⚠️ 開始日期晚於完成日期，請確認工時設定');
+                    }
+
+                    // 檢查日期是否在合理範圍內（過去5年到未來5年）
+                    const fiveYearsAgo = new Date();
+                    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+                    const fiveYearsLater = new Date();
+                    fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5);
+
+                    if (taskDate < fiveYearsAgo || taskDate > fiveYearsLater) {
+                        errors.push('⚠️ 日期超出合理範圍（5年內）');
+                    }
+                }
+
+                // 工時驗證
+                if (task.duration < 0) {
+                    errors.push('❌ 工時不能為負數');
+                } else if (task.duration > 365) {
+                    errors.push('⚠️ 工時超過365天，請確認是否正確');
+                }
+
+                // 負責人驗證
+                if (!task.owner?.trim()) {
+                    errors.push('❌ 負責人不能為空');
+                }
+
+                return errors;
+            };
+
+            const detectCircularDependency = (taskId, dependencyId, currentTasks) => {
+                const visited = new Set();
+                let current = dependencyId;
+                let depth = 0;
+                while (current && depth < 100) {
+                    if (String(current) === String(taskId)) return true;
+                    if (visited.has(current)) return false;
+                    visited.add(current);
+                    const parent = currentTasks.find(t => String(t.id) === String(current));
+                    current = parent?.dependency;
+                    depth++;
+                }
+                return false;
+            };
+
+            const handleSave = (e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const defaultDate = getTaiwanToday();
+                const newItem = {
+                    id: editingTask?.id || Date.now(),
+                    project: fd.get('project'),
+                    category: fd.get('category'),
+                    task: fd.get('task'),
+                    owner: fd.get('owner'),
+                    date: fd.get('date') || defaultDate,
+                    duration: parseInt(fd.get('duration') || 0),
+                    isCheckpoint: fd.get('isCheckpoint') === 'on',
+                    priority: fd.get('priority'),
+                    status: fd.get('status'),
+                    dependency: fd.get('dependency'),
+                    notes: fd.get('notes')
+                };
+                const validationErrors = validateTask(newItem);
+                if (validationErrors.length > 0) { alert('驗證失敗:\n' + validationErrors.join('\n')); return; }
+                if (newItem.dependency && detectCircularDependency(newItem.id, newItem.dependency, tasks)) {
+                    alert('錯誤：偵測到循環相依性！'); return;
+                }
+                const updatedTasks = editingTask ? tasks.map(t => t.id === newItem.id ? newItem : t) : [...tasks, newItem];
+                setTasks(updatedTasks);
+
+                // 儲存到本地備份
+                try {
+                    localStorage.setItem('tasks_backup', JSON.stringify(updatedTasks));
+                    localStorage.setItem('tasks_backup_time', new Date().toISOString());
+                } catch (e) {
+                    console.warn('本地儲存失敗:', e);
+                }
+
+                setIsModalOpen(false);
+                if (!isOffline) {
+                    fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'upsert', data: newItem })
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                            return response.json();
+                        })
+                        .then(data => console.log('✅ 儲存成功:', data))
+                        .catch(err => {
+                            console.error("❌ Save Error:", err);
+                            // 可選：顯示錯誤提示給使用者
+                        });
+                }
+            };
+
+            const handleDelete = (id) => {
+                if (!confirm('確定要刪除此任務嗎？(將同步刪除 Google Sheet 資料)')) return;
+                setTasks(prev => prev.filter(x => x.id !== id));
+                if (!isOffline) {
+                    fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete', id: id })
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                            return response.json();
+                        })
+                        .then(data => console.log('✅ 刪除成功:', data))
+                        .catch(err => {
+                            console.error("❌ Delete Error:", err);
+                        });
+                }
+            };
+
+            const toggleStatFilter = (type) => { setFilterStat(prev => prev === type ? null : type); setViewMode('dashboard'); };
+            const changeMonth = (delta) => { const d = new Date(calendarMonth); d.setMonth(d.getMonth() + delta); setCalendarMonth(d); };
+
+            const chartData = [
+                { name: 'PlanB', value: tasks.filter(t => t.project === 'PlanB').length, color: '#10b981' },
+                { name: 'Machine', value: tasks.filter(t => t.project === 'Machine').length, color: '#8b5cf6' },
+                { name: 'Chip', value: tasks.filter(t => t.project === 'Chip').length, color: '#3b82f6' }
+            ];
+
+            const getProjectColor = (p) => {
+                switch (p) {
+                    case 'PlanB': return 'border-emerald-500 bg-emerald-50 text-emerald-800';
+                    case 'Machine': return 'border-purple-500 bg-purple-50 text-purple-800';
+                    case 'Chip': return 'border-blue-500 bg-blue-50 text-blue-800';
+                    default: return 'border-gray-500 bg-gray-50';
+                }
+            };
+
+            const getStatusBadge = (t) => {
+                if (t.date < todayStr && t.status !== 'Done') return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">⛔ 逾期</span>;
+                const startDate = getStartDate(t.date, t.duration);
+                if (t.status === 'Todo' && startDate <= todayStr) return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200">⚠️ 應開工</span>;
+                switch (t.status) {
+                    case 'Todo': return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">待執行</span>;
+                    case 'InProgress': case 'Pending': return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">進行中</span>;
+                    case 'Done': return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">完成</span>;
+                    case 'Delayed': return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200">延誤</span>;
+                    default: return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600">{t.status}</span>;
+                }
+            };
+
+            // --- Gantt Chart View (Corrected Layout) ---
+            const GanttView = () => {
+                const { sortedTasks, minDate, totalDays } = useMemo(() => {
+                    const ganttTasks = tasks.filter(t => ganttFilter === 'All' || t.project === ganttFilter);
+                    const sorted = ganttTasks.sort((a, b) => new Date(getStartDate(a.date, a.duration)) - new Date(getStartDate(b.date, b.duration)));
+                    let min = new Date();
+                    let max = new Date();
+                    if (sorted.length > 0) {
+                        const dates = sorted.flatMap(t => [new Date(getStartDate(t.date, t.duration)), new Date(t.date)]);
+                        min = new Date(Math.min(...dates));
+                        max = new Date(Math.max(...dates));
+                    }
+                    min.setDate(min.getDate() - 5);
+                    max.setDate(max.getDate() + 15);
+                    const days = Math.ceil((max - min) / (1000 * 60 * 60 * 24));
+                    return { sortedTasks: sorted, minDate: min, totalDays: days };
+                }, [tasks, ganttFilter]);
+
+                const getLeftPos = (dStr) => {
+                    const d = new Date(dStr);
+                    const diff = Math.ceil((d - minDate) / (1000 * 60 * 60 * 24));
+                    return diff * PX_PER_DAY;
+                };
+
+                const todayPos = getLeftPos(todayStr);
+
+                const drawDependencies = () => {
+                    if (!showDependencies) return null;
+                    return sortedTasks.map((task, taskIndex) => {
+                        if (!task.dependency) return null;
+                        const parent = sortedTasks.find(p => String(p.id) === String(task.dependency));
+                        const parentIndex = sortedTasks.indexOf(parent);
+                        if (!parent || parentIndex === -1) return null;
+
+                        const parentStartStr = getStartDate(parent.date, parent.duration);
+                        const parentX = getLeftPos(parentStartStr) + (parent.duration * PX_PER_DAY);
+                        const parentY = parentIndex * ROW_HEIGHT + 20;
+                        const childStartStr = getStartDate(task.date, task.duration);
+                        const childX = getLeftPos(childStartStr);
+                        const childY = taskIndex * ROW_HEIGHT + 20;
+
+                        const midX = (parentX + childX) / 2;
+                        const path = `M ${parentX} ${parentY} C ${parentX + 20} ${parentY}, ${childX - 20} ${childY}, ${childX} ${childY}`;
+                        return <path key={`${parent.id}-${task.id}`} d={path} stroke="#94a3b8" strokeWidth="1.5" fill="none" markerEnd="url(#arrowhead)" />;
+                    });
+                };
+
+                // Group days by month for the month header
+                const monthHeaders = useMemo(() => {
+                    const headers = [];
+                    let currentMonth = -1;
+                    let monthStartDay = 0;
+
+                    for (let i = 0; i < totalDays; i++) {
+                        const d = new Date(minDate);
+                        d.setDate(d.getDate() + i);
+                        const month = d.getMonth();
+
+                        if (month !== currentMonth) {
+                            if (currentMonth !== -1) {
+                                headers.push({
+                                    month: currentMonth,
+                                    year: new Date(minDate.getTime() + (monthStartDay * 24 * 60 * 60 * 1000)).getFullYear(),
+                                    startDay: monthStartDay,
+                                    daysCount: i - monthStartDay
+                                });
+                            }
+                            currentMonth = month;
+                            monthStartDay = i;
+                        }
+                    }
+                    // Add last month segment
+                    headers.push({
+                        month: currentMonth,
+                        year: new Date(minDate.getTime() + (monthStartDay * 24 * 60 * 60 * 1000)).getFullYear(),
+                        startDay: monthStartDay,
+                        daysCount: totalDays - monthStartDay
+                    });
+
+                    return headers;
+                }, [minDate, totalDays]);
+
+                // Grid lines for timeline
+                const gridLines = Array.from({ length: totalDays }).map((_, i) => (
+                    <div key={i} className={`gantt-grid-col ${i % 7 === 0 || i % 7 === 6 ? 'bg-slate-50' : ''}`} style={{ width: `${PX_PER_DAY}px` }}></div>
+                ));
+
+                // Timeline day header cells
+                const timelineDayHeaders = Array.from({ length: totalDays }).map((_, i) => {
+                    const d = new Date(minDate);
+                    d.setDate(d.getDate() + i);
+                    return <div key={i} className={`gantt-day-cell ${d.getDay() === 0 || d.getDay() === 6 ? 'is-weekend' : ''}`} style={{ width: `${PX_PER_DAY}px` }}>{d.getDate()}</div>
+                });
+
+                return (
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[600px]">
+                        <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
+                            <h3 className="font-bold text-slate-700">專案甘特圖 (Gantt)</h3>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2 text-xs text-slate-600 bg-white px-2 py-1 rounded border shadow-sm">
+                                    <input type="checkbox" id="toggleDeps" checked={showDependencies} onChange={(e) => setShowDependencies(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+                                    <label htmlFor="toggleDeps" className="cursor-pointer select-none">顯示連線 (Beta)</label>
+                                </div>
+                                <div className="text-xs text-slate-500 flex gap-2">
+                                    {['PlanB', 'Machine', 'Chip'].map(p => (
+                                        <span key={p} onClick={() => setGanttFilter(prev => prev === p ? 'All' : p)}
+                                            className={`inline-flex items-center cursor-pointer px-2 py-1 rounded transition-colors ${ganttFilter === 'All' || ganttFilter === p ? 'bg-indigo-100 text-indigo-700 font-bold' : 'bg-slate-100 text-slate-400'}`}>
+                                            {p}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="gantt-wrapper">
+                            {/* Header Row */}
+                            <div className="gantt-header-row">
+                                <div className="gantt-header-wrapper">
+                                    <div className="gantt-header-task">任務名稱</div>
+                                    <div className="gantt-header-timeline" style={{ width: `${totalDays * PX_PER_DAY}px` }}>
+                                        <div className="gantt-header-month-row">
+                                            {monthHeaders.map((m, idx) => (
+                                                <div key={idx} className={`gantt-month-cell ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`} style={{ width: `${m.daysCount * PX_PER_DAY}px` }}>
+                                                    {m.year}年{m.month + 1}月
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="gantt-header-day-row">
+                                            {timelineDayHeaders}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Body */}
+                            <div className="gantt-body">
+                                <div className="gantt-body-content" style={{ width: `${200 + totalDays * PX_PER_DAY}px` }}>
+                                    {/* Grid Background */}
+                                    <div className="gantt-grid-lines" style={{ width: `${totalDays * PX_PER_DAY}px` }}>{gridLines}</div>
+
+                                    {/* Today Line */}
+                                    {todayPos > 0 && <div className="today-line" style={{ left: `${200 + todayPos}px`, height: '100%' }}></div>}
+
+                                    {/* SVG Lines */}
+                                    <svg className="dependency-svg" style={{ left: '200px', width: `${totalDays * PX_PER_DAY}px`, height: `${sortedTasks.length * ROW_HEIGHT}px` }}>
+                                        <defs>
+                                            <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                                                <polygon points="0 0, 6 2, 0 4" fill="#94a3b8" />
+                                            </marker>
+                                        </defs>
+                                        {drawDependencies()}
+                                    </svg>
+
+                                    {/* Task Rows */}
+                                    {sortedTasks.map(t => {
+                                        const start = getStartDate(t.date, t.duration);
+                                        const left = getLeftPos(start);
+                                        const width = t.duration * PX_PER_DAY;
+                                        const colorClass = t.project === 'PlanB' ? 'bg-emerald-500' : t.project === 'Machine' ? 'bg-purple-500' : 'bg-blue-500';
+
+                                        return (
+                                            <div key={t.id} className="gantt-row">
+                                                <div className="gantt-task-col truncate" title={t.task}>{t.task}</div>
+                                                <div className="gantt-timeline-col">
+                                                    <div
+                                                        className={`gantt-bar ${colorClass} ${t.status === 'Done' ? 'opacity-50 grayscale' : ''}`}
+                                                        style={{ left: `${left}px`, width: `${width}px` }}
+                                                        onClick={() => { setEditingTask(t); setIsModalOpen(true); }}
+                                                        title={`${t.task} (${t.duration}天)`}
+                                                    >
+                                                        {t.duration > 2 && <span className="text-[10px] pl-1">{t.owner}</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen pb-10">
+                    {/* Header */}
+                    <div className="bg-white border-b sticky top-0 z-30 shadow-sm px-6 py-4 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-indigo-600 text-white p-2 rounded-lg"><Icon path={paths.list} /></div>
+                            <h1 className="text-xl font-bold text-slate-800">Project Tracker <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">v6.4</span></h1>
+                            {isLoading && <div className="flex items-center text-sm text-slate-500 gap-2 ml-4"><div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full spinner"></div> 載入中...</div>}
+                            {isOffline && <div className="flex items-center text-sm text-red-500 gap-2 ml-4 bg-red-50 px-2 py-1 rounded"><Icon path={paths.alert} size={14} /> 離線</div>}
+                            <div className="text-xs bg-slate-100 text-slate-500 px-3 py-1 rounded-full hidden sm:block ml-4 flex items-center gap-1">
+                                <Icon path={paths.clock} size={12} /> {todayStr}
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setViewMode('dashboard')}
+                                className={`p-2 rounded-lg transition-colors ${viewMode === 'dashboard' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-100'}`}
+                                title="列表"
+                                aria-label="切換至列表視圖"
+                                aria-pressed={viewMode === 'dashboard'}
+                            >
+                                <Icon path={paths.list} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('calendar')}
+                                className={`p-2 rounded-lg transition-colors ${viewMode === 'calendar' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-100'}`}
+                                title="日曆"
+                                aria-label="切換至日曆視圖"
+                                aria-pressed={viewMode === 'calendar'}
+                            >
+                                <Icon path={paths.calendar} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('gantt')}
+                                className={`p-2 rounded-lg transition-colors ${viewMode === 'gantt' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-100'}`}
+                                title="甘特圖"
+                                aria-label="切換至甘特圖視圖"
+                                aria-pressed={viewMode === 'gantt'}
+                            >
+                                <Icon path={paths.gantt} />
+                            </button>
+                            <div className="w-px h-8 bg-slate-200 mx-2"></div>
+                            <button
+                                onClick={() => { setEditingTask(null); setIsModalOpen(true); }}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+                                aria-label="新增任務"
+                            >
+                                <Icon path={paths.plus} size={16} /> 新增
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto px-4 py-8">
+                        {/* Error Banner */}
+                        {alerts.length > 0 && (
+                            <div className="mb-6 grid gap-2">
+                                {alerts.map((a, i) => (
+                                    <div key={i} className={`p-3 rounded-md border flex items-center gap-2 text-sm font-medium ${a.type === 'danger' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-orange-50 border-orange-200 text-orange-700'}`}>
+                                        <Icon path={paths.alert} size={16} /> {a.msg}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Stat Buttons */}
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
+                            {[
+                                { label: '總任務', val: stats.total, color: 'text-slate-800', type: null },
+                                { label: '檢查點', val: stats.checkpoints, color: 'text-indigo-600', type: 'Checkpoints' },
+                                { label: '待辦急件', val: stats.pendingHigh, color: 'text-orange-600', type: 'Urgent' },
+                                { label: '應開工未動', val: stats.lateStart, color: 'text-red-600', type: 'LateStart' },
+                                { label: '已延遲', val: stats.delayed, color: 'text-rose-600', type: 'Delayed' },
+                                { label: '已完成', val: stats.completed, color: 'text-green-600', type: 'Completed' }
+                            ].map((s, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => s.type !== undefined && toggleStatFilter(s.type)}
+                                    className={`bg-white p-5 rounded-xl border shadow-sm text-left transition-all ${filterStat === s.type ? 'ring-2 ring-indigo-500 bg-indigo-50' : 'hover:shadow-md'}`}
+                                >
+                                    <div className="text-sm text-slate-500 font-medium">{s.label}</div>
+                                    <div className={`text-3xl font-bold mt-2 ${s.color}`}>{s.val}</div>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Main Views */}
+                        {viewMode === 'gantt' ? <GanttView /> : (
+                            viewMode === 'dashboard' ? (
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    <div className="lg:col-span-2 space-y-4">
+                                        <div className="flex gap-2 bg-white p-1 rounded-lg border w-fit">
+                                            {['All', 'PlanB', 'Machine', 'Chip'].map(p => (
+                                                <button key={p} onClick={() => setFilterProject(p)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${filterProject === p ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{p}</button>
+                                            ))}
+                                        </div>
+                                        {filteredTasks.length === 0 && !isLoading ? (
+                                            <div className="p-12 text-center bg-white rounded-xl border shadow-sm">
+                                                <div className="text-slate-300 mb-4"><Icon path={paths.list} size={48} className="mx-auto" /></div>
+                                                <h3 className="text-lg font-bold text-slate-600 mb-2">沒有符合條件的任務</h3>
+                                                <p className="text-slate-400">請調整篩選條件或新增任務</p>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-sm text-left">
+                                                        <thead className="bg-slate-50 text-slate-500 border-b">
+                                                            <tr>
+                                                                <th className="px-4 py-3">ID</th>
+                                                                <th className="px-4 py-3">狀態</th>
+                                                                <th className="px-4 py-3">任務</th>
+                                                                <th className="px-4 py-3">工時/建議開始</th>
+                                                                <th className="px-4 py-3">完成日</th>
+                                                                <th className="px-4 py-3">負責人</th>
+                                                                <th className="px-4 py-3 text-right">動作</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-100">
+                                                            {filteredTasks.sort((a, b) => new Date(a.date) - new Date(b.date)).map(t => (
+                                                                <tr key={t.id} className={`hover:bg-slate-50 group transition-colors ${t.isCheckpoint ? 'bg-indigo-50/40' : ''}`} tabIndex={0}>
+                                                                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">#{t.id}</td>
+                                                                    <td className="px-4 py-3">
+                                                                        {getStatusBadge(t)}
+                                                                        <div className={`text-[10px] mt-1 px-1.5 w-fit rounded border ${t.project === 'PlanB' ? 'text-emerald-600 border-emerald-200' : t.project === 'Machine' ? 'text-purple-600 border-purple-200' : 'text-blue-600 border-blue-200'}`}>{t.project}</div>
+                                                                    </td>
+                                                                    <td className="px-4 py-3">
+                                                                        <div className="font-medium text-slate-800 flex items-center gap-2">
+                                                                            {t.isCheckpoint && <Icon path={paths.flag} size={14} className="text-indigo-600 fill-indigo-100" />}
+                                                                            {t.task}
+                                                                            {t.dependency && <div className="tooltip-container"><Icon path={paths.link} size={12} className="text-slate-400 ml-1" /><span className="tooltip-text">相依性: {t.dependency}</span></div>}
+                                                                            {t.notes && <div className="tooltip-container"><Icon path={paths.file} size={12} className="text-slate-400 ml-1" /><span className="tooltip-text">{t.notes}</span></div>}
+                                                                        </div>
+                                                                        {t.priority === 'High' && <span className="text-[10px] text-orange-600 font-bold">⚠️ 急件</span>}
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-slate-500">
+                                                                        <div className="flex items-center gap-1"><Icon path={paths.timer} size={14} /> {t.duration} 天</div>
+                                                                        <div className="text-[10px] text-slate-400 mt-0.5">Start: {getStartDate(t.date, t.duration)}</div>
+                                                                    </td>
+                                                                    <td className="px-4 py-3 font-medium text-slate-600">{t.date}</td>
+                                                                    <td className="px-4 py-3"><div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">{t.owner ? t.owner[0] : '?'}</div></td>
+                                                                    <td className="px-4 py-3 text-right">
+                                                                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                            <button onClick={() => { setEditingTask(t); setIsModalOpen(true); }} className="text-slate-400 hover:text-indigo-600"><Icon path={paths.edit} /></button>
+                                                                            <button onClick={() => handleDelete(t.id)} className="text-slate-400 hover:text-red-600"><Icon path={paths.trash} /></button>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="space-y-6">
+                                        <div className="bg-white p-5 rounded-xl border shadow-sm">
+                                            <h3 className="font-bold text-slate-800 mb-4">專案分佈</h3>
+                                            <div className="h-64">
+                                                {window.Recharts && (
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <PieChart>
+                                                            <Pie data={chartData} dataKey="value" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
+                                                                {chartData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                                            </Pie>
+                                                            <Tooltip />
+                                                            <Legend verticalAlign="bottom" height={36} />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-lg font-bold text-slate-800">
+                                            {calendarMonth.toLocaleString('default', { year: 'numeric', month: 'long' })}
+                                        </h2>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-slate-100 rounded-full"><Icon path={paths.left} /></button>
+                                            <button onClick={() => changeMonth(1)} className="p-2 hover:bg-slate-100 rounded-full"><Icon path={paths.right} /></button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-lg overflow-hidden">
+                                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                                            <div key={d} className="bg-slate-50 py-2 text-center text-xs font-bold text-slate-500 uppercase">{d}</div>
+                                        ))}
+                                        {calendarDays.map((day, idx) => (
+                                            <div key={idx} className={`bg-white min-h-[120px] p-2 relative calendar-cell ${!day ? 'bg-slate-50/50' : ''}`}>
+                                                {day && (
+                                                    <>
+                                                        <span className={`text-xs font-medium ${day.date === new Date().getDate() && calendarMonth.getMonth() === new Date().getMonth() ? 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center' : 'text-slate-400'}`}>{day.date}</span>
+                                                        <div className="mt-1 space-y-1 overflow-y-auto max-h-[100px] scrollbar-hide">
+                                                            {day.tasks.map(t => (
+                                                                <div key={t.id}
+                                                                    onClick={() => { setEditingTask(t); setIsModalOpen(true); }}
+                                                                    className={`group text-[10px] p-1 rounded border-l-2 cursor-pointer hover:opacity-80 flex items-center gap-1 ${getProjectColor(t.project)} ${t.isCheckpoint ? 'font-bold' : ''}`}>
+                                                                    {t.isCheckpoint && <Icon path={paths.flag} size={8} />}
+                                                                    <span className="truncate">
+                                                                        <span className="font-mono text-[9px] mr-1 opacity-70 hidden group-hover:inline">#{t.id}</span>
+                                                                        {t.task}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
+                        )}
+                    </div>
+
+                    {isModalOpen && (
+                        <div
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="modal-title"
+                        >
+                            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg animate-fade-in overflow-hidden">
+                                <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+                                    <h3 id="modal-title" className="font-bold text-slate-800">{editingTask ? '編輯任務' : '新增任務'}</h3>
+                                    <button
+                                        onClick={() => setIsModalOpen(false)}
+                                        className="text-slate-400 hover:text-slate-600"
+                                        aria-label="關閉對話框"
+                                    >
+                                        <Icon path={paths.x} />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleSave} className="p-6 space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">任務內容</label>
+                                        <input name="task" defaultValue={editingTask?.task} required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">專案</label>
+                                            <select name="project" defaultValue={editingTask?.project || 'PlanB'} className="w-full border rounded-lg p-2 text-sm">
+                                                {PROJECTS.map(p => <option key={p} value={p}>{p}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">類別 (Category)</label>
+                                            <select name="category" defaultValue={editingTask?.category || 'Mechanism'} className="w-full border rounded-lg p-2 text-sm">
+                                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">負責人</label>
+                                            <input list="owners" name="owner" defaultValue={editingTask?.owner} required className="w-full border rounded-lg p-2 text-sm" />
+                                            <datalist id="owners">{OWNERS.map(o => <option key={o} value={o} />)}</datalist>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">預計工時 (天)</label>
+                                            <input type="number" name="duration" defaultValue={editingTask?.duration || 1} min="0" className="w-full border rounded-lg p-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">完成日</label>
+                                            <input type="date" name="date" defaultValue={editingTask?.date || todayStr} required className="w-full border rounded-lg p-2 text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">優先級</label>
+                                            <select name="priority" defaultValue={editingTask?.priority || 'Medium'} className="w-full border rounded-lg p-2 text-sm">
+                                                <option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">前置任務 / 相依性 (Dependency)</label>
+                                        <input name="dependency" defaultValue={editingTask?.dependency} placeholder="例如: 需先完成 ID-5" className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">備註 (Notes)</label>
+                                        <textarea name="notes" defaultValue={editingTask?.notes} rows="2" placeholder="詳細說明..." className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">狀態</label>
+                                        <select name="status" defaultValue={editingTask?.status || 'Todo'} className="w-full border rounded-lg p-2 text-sm">
+                                            <option value="Todo">待執行</option>
+                                            <option value="InProgress">進行中</option>
+                                            <option value="Done">完成</option>
+                                            <option value="Delayed">延誤</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 pt-2 bg-slate-50 p-3 rounded-lg border">
+                                        <div className="checkbox-container">
+                                            <input type="checkbox" name="isCheckpoint" id="chk" defaultChecked={editingTask?.isCheckpoint} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer border-slate-300 transition-all" />
+                                            <label htmlFor="chk" className="toggle-label block overflow-hidden h-6 rounded-full bg-slate-300 cursor-pointer transition-all"></label>
+                                        </div>
+                                        <label htmlFor="chk" className="text-sm font-medium text-slate-700 cursor-pointer flex items-center gap-1">設為檢查點 (Checkpoint) <Icon path={paths.flag} size={14} /></label>
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-4">
+                                        <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg text-sm">取消</button>
+                                        <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm">儲存</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Tracker v6.8 </title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            safelist: [
+                'bg-rose-50', 'bg-rose-50/50', 'border-rose-500', 'bg-rose-100', 'text-rose-700',
+                'bg-red-50', 'hover:bg-red-50/30', 'border-red-500', 'bg-red-100', 'text-red-700', 'border-red-200',
+                'bg-orange-50', 'bg-orange-50/30', 'border-orange-500', 'bg-orange-100', 'text-orange-700', 'border-orange-200',
+                'bg-yellow-100', 'text-yellow-700', 'border-yellow-200',
+                'border-l-4'
+            ]
+        }
+    </script>
+
+    <!-- React & ReactDOM -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+
+    <!-- Prop Types -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+
+    <!-- Recharts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.10.3/Recharts.min.js"></script>
+
+    <!-- Babel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Data Converter - 強制重新載入修復後的版本 -->
+    <script src="js/data_converter.js?v=13101322"></script>
+
+    <!-- 立即覆寫 normalizeDate 函數以修復 Excel 日期問題 -->
+    <script>
+        // 強制刪除舊版本（如果存在）
+        if (typeof normalizeDate !== 'undefined') {
+            try {
+                delete window.normalizeDate;
+                // 也嘗試刪除全域作用域中的定義
+                if (typeof normalizeDate !== 'undefined') {
+                    normalizeDate = undefined;
+                }
+            } catch (e) {
+                console.warn('[FIX] 無法刪除舊 normalizeDate:', e);
+            }
+        }
+
+        // 定義新的 normalizeDate 函數（支援 Excel 序列號 + ISO 字串）
+        window.normalizeDate = function (dateInput) {
+            if (!dateInput && dateInput !== 0) return '';
+
+            // 已經是 YYYY-MM-DD 格式
+            if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+                return dateInput;
+            }
+
+            try {
+                let date;
+
+                // 處理 Excel 日期序列號（數字類型）
+                if (typeof dateInput === 'number') {
+                    console.log('[FIX] 處理 Excel 序列號:', dateInput);
+                    // Excel 的日期序列號基準是 1900-01-01
+                    const excelEpoch = new Date(1899, 11, 30); // 1899-12-30
+                    const milliseconds = dateInput * 86400000;
+                    date = new Date(excelEpoch.getTime() + milliseconds);
+                    console.log('[FIX] 轉換結果:', date.toISOString());
+                } else if (typeof dateInput === 'string') {
+                    // 處理 ISO 字串（Google Sheets）或其他日期字串
+                    console.log('[FIX] 處理日期字串:', dateInput);
+                    date = new Date(dateInput);
+
+                    // 如果是 ISO 字串格式（含時區），需要調整為當地日期
+                    if (/^\d{4}-\d{2}-\d{2}T/.test(dateInput)) {
+                        // ISO 字串包含時間，可能有時區問題
+                        // 使用 UTC 日期部分避免時區轉換
+                        const utcDate = new Date(dateInput);
+                        date = new Date(utcDate.getUTCFullYear(), utcDate.getUTCMonth(), utcDate.getUTCDate());
+                        console.log('[FIX] ISO 字串調整為本地日期:', date);
+                    }
+                } else {
+                    // 其他類型嘗試直接解析
+                    date = new Date(dateInput);
+                }
+
+                if (isNaN(date.getTime())) {
+                    console.warn('[FIX] 無法解析:', dateInput);
+                    return '';
+                }
+
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const result = `${year}-${month}-${day}`;
+                console.log('[FIX] 最終結果:', result);
+                return result;
+            } catch (e) {
+                console.error('[FIX] 錯誤:', dateInput, e);
+                return '';
+            }
+        };
+
+        // 強制設置為全域函數（多種方式確保生效）
+        if (typeof window !== 'undefined') {
+            window.normalizeDate = window.normalizeDate;
+        }
+        if (typeof global !== 'undefined') {
+            global.normalizeDate = window.normalizeDate;
+        }
+        // 直接賦值到全域作用域
+        normalizeDate = window.normalizeDate;
+
+        console.log('[FIX] normalizeDate 已強制覆寫，測試:', normalizeDate(45672));
+    </script>
+
+    <style>
+        /* ... 所有樣式保持不變 ... */
+        /* (從原始 index.html 複製 124-448 行的樣式) */
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script src="js/config.js"></script>
+    <script type="text/babel" src="js/utils/icons.js"></script>
+    <script type="text/babel" src="js/utils/helpers.js"></script>
+    <script type="text/babel" src="js/components/LoginScreen.js"></script>
+    <script type="text/babel" src="js/components/GanttView.js"></script>
+    <script type="text/babel" src="js/components/CalendarView.js"></script>
+    <script type="text/babel" src="js/components/TaskModal.js"></script>
+    <script type="text/babel" src="js/components/Dashboard.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } = window.Recharts || {};
+
+        // ✅ Task ID部門代碼Mapping (用於未來Task ID升級)
+        const DEPT_CODES = {
+            '晶片': 'CHIP',
+            '機構': 'MECH',
+            '軟體': 'SW',
+            '電控': 'EC',
+            '流道': 'FLOW',
+            '生醫': 'BIO',
+            'QA': 'QA',
+            '管理': 'MGT',
+            'issue': 'ISS'
+        };
+    </script>
+
+    <!-- INJECT_HOOKS -->
+
+    <!-- INJECT_CONTEXTS -->
+
+    <!-- INJECT_APP -->
+
+    <!-- ==================== 外部組件引入 ==================== -->
+    <!-- Phase 1: 系統管理介面 -->
+    <script type="text/babel" src="js/components/SettingsView.js"></script>
+
+    <!-- ==================== 應用啟動 ==================== -->
+    <script type="text/babel">
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+
+</body>
+
+</html>

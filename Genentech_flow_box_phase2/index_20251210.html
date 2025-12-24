@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genenetech phase2 流道整合開發時程</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo } = React;
+
+        // --- Simple Icon Components (Replacing Lucide-React for standalone HTML) ---
+        const IconWrapper = ({ children, size = 18, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const User = (props) => <IconWrapper {...props}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconWrapper>;
+        const AlertCircle = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></IconWrapper>;
+        const CheckCircle = (props) => <IconWrapper {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconWrapper>;
+        const Clock = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></IconWrapper>;
+        const CalendarIcon = (props) => <IconWrapper {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></IconWrapper>;
+        const List = (props) => <IconWrapper {...props}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></IconWrapper>;
+        const Layers = (props) => <IconWrapper {...props}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></IconWrapper>;
+        const Cpu = (props) => <IconWrapper {...props}><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></IconWrapper>;
+        const Activity = (props) => <IconWrapper {...props}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></IconWrapper>;
+        const ChevronLeft = (props) => <IconWrapper {...props}><polyline points="15 18 9 12 15 6"/></IconWrapper>;
+        const ChevronRight = (props) => <IconWrapper {...props}><polyline points="9 18 15 12 9 6"/></IconWrapper>;
+
+        // --- Main App Component ---
+        const ProjectTimeline = () => {
+          const [activeTab, setActiveTab] = useState('PlanB');
+          const [viewMode, setViewMode] = useState('calendar');
+          const [currentMonthDate, setCurrentMonthDate] = useState(new Date(2025, 11, 1)); // Dec 2025
+
+          const getCategoryColor = (category) => {
+            switch (category) {
+              case 'Mechanism': return 'bg-blue-100 text-blue-800 border-blue-200';
+              case 'Electrical': return 'bg-purple-100 text-purple-800 border-purple-200';
+              case 'Software': return 'bg-green-100 text-green-800 border-green-200';
+              case 'QA': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+              case 'Design': return 'bg-orange-100 text-orange-800 border-orange-200';
+              case 'Flow': return 'bg-red-100 text-red-800 border-red-200';
+              default: return 'bg-gray-100 text-gray-800';
+            }
+          };
+
+          const getCategoryLabel = (category) => {
+            switch (category) {
+              case 'Mechanism': return '機構';
+              case 'Electrical': return '電控';
+              case 'Software': return '軟體';
+              case 'QA': return 'QA/測試';
+              case 'Design': return '設計';
+              case 'Flow': return '流道';
+              default: return category;
+            }
+          };
+
+          const getProjectColor = (project) => {
+            switch(project) {
+                case 'PlanB': return 'border-emerald-500 bg-emerald-50 hover:bg-emerald-100';
+                case 'Machine': return 'border-purple-500 bg-purple-50 hover:bg-purple-100';
+                case 'Chip': return 'border-blue-500 bg-blue-50 hover:bg-blue-100';
+                default: return 'border-gray-500 bg-gray-50';
+            }
+          };
+
+          const getProjectLabel = (project) => {
+              switch(project) {
+                  case 'PlanB': return '流道';
+                  case 'Machine': return '機台';
+                  case 'Chip': return '晶片';
+                  default: return '';
+              }
+          }
+
+          const timelineData = {
+            PlanB: [
+              { date: '12/12', category: 'Flow', task: '架構確認', owner: 'Anting', critical: false },
+              { date: '12/16', category: 'Mechanism', task: 'FFKM LFN相容性測試', owner: 'Anting', critical: false },
+              { date: '12/17', category: 'Electrical', task: '電控板設計完成', owner: '子宗', critical: false },
+              { date: '12/17', category: 'Mechanism', task: '孔盤機構驗證滑軌組裝', owner: '宗轅', critical: false },
+              { date: '12/18', category: 'Mechanism', task: '孔盤機構驗證滑軌Demo', owner: '宗轅', critical: false },
+              { date: '12/18', category: 'Mechanism', task: '流道機殼設計完成', owner: 'Jerry', critical: false },
+              { date: '12/17', category: 'Electrical', task: '電控板發包完成', owner: '子宗', critical: false },
+              { date: '12/19', category: 'Mechanism', task: '流道機殼發包完成', owner: 'Jun', critical: false },
+              { date: '12/19', category: 'Mechanism', task: '通用流道8排一組Reservoir 到貨測試', owner: 'Jerry', critical: true },
+              { date: '12/26', category: 'Mechanism', task: 'Peek 流道到貨', owner: '宗轅', critical: true },
+              { date: '12/26', category: 'Flow', task: '通用流道8排一組Reservoir 測試', owner: 'Anting', critical: true },
+              { date: '12/26', category: 'Software', task: '按照新需求開發 (使用實驗流道開始驗證)', owner: 'RD', critical: false },
+              { date: '1/9', category: 'Electrical', task: '電控板到貨 (前期用開發板實驗)', owner: 'EE', critical: false },
+              { date: '1/9', category: 'Flow', task: '廢液瓶安裝/佈線方式優化', owner: 'Anting', critical: false },
+              { date: '1/9', category: 'Flow', task: '60路流道最早開始組裝時間', owner: 'Anting', critical: false },
+              { date: '1/12', category: 'Mechanism', task: '機殼相關加工件到貨 (工時20 Days)', owner: 'Jerry', critical: true },
+              { date: '1/16', category: 'Mechanism', task: '(Option) 絕對定量流道', owner: '', critical: false },
+              { date: '1/19', category: 'Flow', task: '60路流道組裝完成 (4人人力)', owner: 'Anting', critical: false },
+              { date: '1/7', category: 'Electrical', task: '滑軌電控板驗證完成', owner: '子宗', critical: false },
+              { date: '1/9', category: 'Mechanism', task: '(Option) 液面sensor for 油瓶/廢液瓶 (尚未選型/驗證)', owner: '慶德', critical: true },
+              { date: '2/6', category: 'Design', task: '專案預計完成日', owner: 'All', critical: false, isMilestone: true },
+              { date: '2/9', category: 'QA', task: 'QA 驗證 + 生醫驗證', owner: 'QA', critical: true },
+            ],
+            Machine: [
+              { date: '12/10', category: 'Mechanism', task: '低規相機鏡頭選型 (確認時程)', owner: 'Jerry', critical: false },
+              { date: '12/10', category: 'Mechanism', task: '燈版需選型/設計 (確認設計/時程)', owner: 'Jerry', critical: false },
+              { date: '12/12', category: 'Electrical', task: '1004 新增電控2.0實驗位置 (Genentech 實驗機)', owner: '子宗', critical: false },
+              { date: '12/15', category: 'Electrical', task: '新增Psensor 的閥門控制板(燈版)', owner: '子宗', critical: false },
+              { date: '12/17', category: 'Electrical', task: '電控板設計完成', owner: '子宗', critical: false },
+              { date: '12/30', category: 'Mechanism', task: '絕對定量模組交軟體驗證', owner: '宗轅', critical: false },
+              { date: '12/30', category: 'Mechanism', task: 'Psensor 三向閥門 機構設計', owner: '宗轅', critical: false },
+              { date: '1/16', category: 'Software', task: '新絕對定量模組完成', owner: '宗轅', critical: false },
+              { date: '1/16', category: 'Mechanism', task: '組裝完成', owner: '宗轅', critical: false },
+              { date: '1/23', category: 'Software', task: 'RD按照新需求開發: 決對定量', owner: 'SW', critical: false },
+              { date: '1/27', category: 'QA', task: '需RD新增決對定量 SPEC. : ', owner: 'QA', critical: false },
+              { date: '1/27', category: 'Design', task: '專案預計完成日 (機台)', owner: 'All', critical: false, isMilestone: true },
+              { date: '1/9', category: 'Electrical', task: '液面sensor線路 (需實驗/開發)', owner: '慶德', critical: false },
+              { date: '1/9', category: 'Electrical', task: '需換轉版 (拿到轉板, 需pullin)', owner: '子宗', critical: true },
+              { date: '1/9', category: 'Electrical', task: '絕對定量的電控板 (拿到轉板, 需pullin)', owner: '慶德', critical: true },
+            ],
+            Chip: [
+              { date: '12/19', category: 'Mechanism', task: '針型注水頭流道for 絕對定量驗證', owner: 'HW', critical: false },
+              { date: '12/31', category: 'Electrical', task: '確認FPGA版本是否更新', owner: 'EE', critical: false },
+              { date: '1/9', category: 'Mechanism', task: '低殘留FFKM、FKM回貨', owner: 'Mech', critical: true },
+              { date: '1/16', category: 'Mechanism', task: '低殘留FFKM驗證', owner: 'Mech', critical: true },
+            ]
+          };
+
+          const parseDateWeight = (dateStr) => {
+            if (!dateStr) return 9999;
+            if (dateStr === '1/B') return 102;
+            if (dateStr === '1/M') return 115;
+            if (dateStr === '1/E') return 131;
+            
+            const parts = dateStr.split('/');
+            if (parts.length < 2) return 9999;
+            const m = parseInt(parts[0], 10);
+            const d = parseInt(parts[1], 10);
+            if (m === 12) return m * 100 + d;
+            return (m + 12) * 100 + d; 
+          };
+          
+          const sortedListData = timelineData[activeTab].sort((a, b) => parseDateWeight(a.date) - parseDateWeight(b.date));
+
+          const getAllTasks = () => {
+            let all = [];
+            Object.keys(timelineData).forEach(key => {
+                const tasks = timelineData[key].map(t => ({...t, project: key}));
+                all = [...all, ...tasks];
+            });
+            return all;
+          };
+
+          const getCalendarCells = (date) => {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - startDate.getDay());
+            const endDate = new Date(lastDay);
+            endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+            
+            const days = [];
+            let current = new Date(startDate);
+            while (current <= endDate) {
+                days.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+            return days;
+          };
+
+          const normalizeDateForCalendar = (dateStr) => {
+            let m, d;
+            if (dateStr === '1/B') { m=1; d=1; }
+            else if (dateStr === '1/M') { m=1; d=15; }
+            else if (dateStr === '1/E') { m=1; d=31; }
+            else {
+                const parts = dateStr.split('/');
+                m = parseInt(parts[0]);
+                d = parseInt(parts[1]);
+            }
+            let y = (m === 12) ? 2025 : 2026;
+            return new Date(y, m-1, d);
+          };
+
+          const currentCalendarTasks = useMemo(() => {
+            const all = getAllTasks();
+            const cells = getCalendarCells(currentMonthDate);
+            return cells.map(cellDate => {
+                const tasks = all.filter(t => {
+                    const taskDate = normalizeDateForCalendar(t.date);
+                    return taskDate.getDate() === cellDate.getDate() && 
+                           taskDate.getMonth() === cellDate.getMonth() &&
+                           taskDate.getFullYear() === cellDate.getFullYear();
+                });
+                return { date: cellDate, tasks };
+            });
+          }, [currentMonthDate]);
+
+          const changeMonth = (delta) => {
+            const newDate = new Date(currentMonthDate);
+            newDate.setMonth(newDate.getMonth() + delta);
+            setCurrentMonthDate(newDate);
+          };
+
+          const renderListView = () => (
+            <div className="space-y-8 relative">
+                <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-0.5 bg-slate-200 transform -translate-x-1/2"></div>
+                {sortedListData.map((item, index) => {
+                    const isEven = index % 2 === 0;
+                    const isMilestone = item.isMilestone;
+                    return (
+                    <div key={index} className={`relative flex items-center md:justify-between ${isEven ? 'flex-row' : 'flex-row-reverse'} group`}>
+                        <div className="absolute left-8 md:left-1/2 transform -translate-x-1/2 flex items-center justify-center w-12 h-12 z-10">
+                            <div className={`w-4 h-4 rounded-full border-4 shadow-sm transition-transform duration-300 group-hover:scale-125 ${
+                                isMilestone ? 'bg-red-500 border-red-200 w-6 h-6' : 
+                                item.critical ? 'bg-orange-500 border-orange-200' : 'bg-slate-400 border-slate-200'
+                            }`}></div>
+                        </div>
+                        <div className={`ml-20 md:ml-0 w-full md:w-[45%] ${!isEven && 'md:text-right'}`}>
+                            <div className={`bg-white p-4 rounded-xl shadow-sm border-l-4 transition-all duration-300 hover:shadow-md ${item.critical ? 'border-l-orange-500' : 'border-l-slate-300'} ${isMilestone ? 'bg-gradient-to-r from-red-50 to-white border-l-red-600 border' : ''}`}>
+                                <div className={`flex items-center gap-2 mb-2 text-sm ${!isEven && 'md:flex-row-reverse'}`}>
+                                    <div className="flex items-center text-slate-600 font-bold bg-slate-100 px-2 py-0.5 rounded">
+                                        <Clock size={14} className="mr-1" />
+                                        {item.date}
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium border ${getCategoryColor(item.category)}`}>
+                                        {getCategoryLabel(item.category)}
+                                    </span>
+                                    {item.critical && (
+                                        <span className="flex items-center text-orange-600 text-xs font-bold">
+                                            <AlertCircle size={14} className="mr-1" />
+                                            急件
+                                        </span>
+                                    )}
+                                </div>
+                                <h3 className={`font-semibold text-slate-800 mb-2 ${isMilestone ? 'text-lg text-red-700' : ''}`}>{item.task}</h3>
+                                {item.owner && (
+                                    <div className={`flex items-center text-slate-500 text-xs mt-2 ${!isEven && 'md:justify-end'}`}>
+                                        <User size={12} className="mr-1" />
+                                        <span>負責人: {item.owner}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="hidden md:block w-[45%]"></div>
+                    </div>
+                    );
+                })}
+            </div>
+          );
+
+          const renderCalendarView = () => {
+            const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            return (
+                <div>
+                    <div className="flex items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                        <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft /></button>
+                        <h2 className="text-xl font-bold text-slate-700">
+                            {currentMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                        </h2>
+                        <button onClick={() => changeMonth(1)} className="p-2 hover:bg-slate-100 rounded-full"><ChevronRight /></button>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-2">
+                        {weekDays.map(day => (
+                            <div key={day} className="text-center font-bold text-slate-400 py-2">{day}</div>
+                        ))}
+                        
+                        {currentCalendarTasks.map(({ date, tasks }, idx) => {
+                            const isCurrentMonth = date.getMonth() === currentMonthDate.getMonth();
+                            const isToday = date.toDateString() === new Date().toDateString();
+                            
+                            return (
+                                <div key={idx} className={`min-h-[120px] bg-white border ${isCurrentMonth ? 'border-slate-200' : 'border-slate-100 bg-slate-50'} p-2 rounded-lg relative overflow-hidden group hover:shadow-md transition-shadow`}>
+                                    <div className={`text-right text-sm font-medium mb-1 ${isCurrentMonth ? 'text-slate-700' : 'text-slate-300'}`}>
+                                        <span className={isToday ? 'bg-blue-600 text-white w-6 h-6 inline-flex items-center justify-center rounded-full' : ''}>
+                                            {date.getDate()}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="space-y-1 overflow-y-auto max-h-[100px] scrollbar-hide">
+                                        {tasks.map((task, tIdx) => (
+                                            <div key={tIdx} className={`text-[10px] p-1 rounded border-l-2 leading-tight ${getProjectColor(task.project)}`}>
+                                                <div className="font-bold flex justify-between items-center">
+                                                    <span>{getProjectLabel(task.project)}</span>
+                                                    {task.critical && <AlertCircle size={8} className="text-orange-600" />}
+                                                </div>
+                                                <div className="truncate text-slate-700">{task.task}</div>
+                                                {task.owner && <div className="text-slate-500 scale-90 origin-top-left">{task.owner}</div>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="mt-4 text-xs text-slate-500 text-center">
+                        * 若日期標示為 1/B, 1/M, 1/E 等，將分別顯示於該月 1日, 15日, 31日
+                    </div>
+                </div>
+            );
+          };
+
+          return (
+            <div className="min-h-screen p-4 md:p-8 font-sans">
+              <div className="max-w-6xl mx-auto">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-800">Genenetech phase2 流道整合開發時程</h1>
+                        <p className="text-slate-500 mt-1">
+                            {viewMode === 'calendar' ? '整合行事曆視圖 (Integrated Calendar)' : '單一專案列表視圖 (Project List)'}
+                        </p>
+                    </div>
+                    <div className="bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex">
+                        <button onClick={() => setViewMode('calendar')} className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${viewMode === 'calendar' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                            <CalendarIcon size={18} />
+                            <span className="font-medium">行事曆</span>
+                        </button>
+                        <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                            <List size={18} />
+                            <span className="font-medium">列表</span>
+                        </button>
+                    </div>
+                </div>
+
+                {viewMode === 'list' ? (
+                     <div className="flex justify-center mb-10">
+                        <div className="bg-white p-1 rounded-xl shadow-md border border-slate-200 inline-flex flex-wrap justify-center gap-1">
+                            {['PlanB', 'Machine', 'Chip'].map((tabKey) => {
+                            const iconMap = { PlanB: <Activity size={18} />, Machine: <Layers size={18} />, Chip: <Cpu size={18} /> };
+                            return (
+                                <button key={tabKey} onClick={() => setActiveTab(tabKey)} className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${activeTab === tabKey ? (tabKey === 'PlanB' ? 'bg-emerald-600' : tabKey === 'Machine' ? 'bg-purple-600' : 'bg-blue-600') + ' text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}>
+                                {iconMap[tabKey]}
+                                {tabKey === 'PlanB' ? '流道' : tabKey === 'Machine' ? '機台' : '晶片'}
+                                </button>
+                            );
+                            })}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex justify-center gap-4 mb-6">
+                         <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <span className="w-3 h-3 rounded bg-emerald-100 border border-emerald-500"></span> 流道 (Plan B)
+                         </div>
+                         <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <span className="w-3 h-3 rounded bg-purple-100 border border-purple-500"></span> 機台
+                         </div>
+                         <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <span className="w-3 h-3 rounded bg-blue-100 border border-blue-500"></span> 晶片
+                         </div>
+                    </div>
+                )}
+                {viewMode === 'list' ? renderListView() : renderCalendarView()}
+              </div>
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ProjectTimeline />);
+    </script>
+</body>
+
+</html>
+
