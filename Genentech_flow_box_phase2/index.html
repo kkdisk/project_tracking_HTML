@@ -1197,6 +1197,8 @@
                                         const left = getLeftPos(start);
                                         const width = t.duration * PX_PER_DAY;
                                         const colorClass = t.project === 'PlanB' ? 'bg-emerald-500' : t.project === 'Machine' ? 'bg-purple-500' : 'bg-blue-500';
+                                        // 專案對應的邊框顏色 (用於 Closed 狀態虛線)
+                                        const borderColor = t.project === 'PlanB' ? '#10b981' : t.project === 'Machine' ? '#a855f7' : '#3b82f6';
 
                                         // 計算原始時程 (若有多筆歷史記錄)
                                         const history = Array.isArray(t.dateHistory) ? t.dateHistory : [];
@@ -1252,18 +1254,24 @@
                                                     )}
                                                     {/* 目前時程 */}
                                                     <div
-                                                        className={`gantt-bar ${colorClass} ${t.status === 'Done' ? 'opacity-50 grayscale' : ''}`}
+                                                        className={`gantt-bar ${t.status === 'Closed' ? '' : colorClass} ${t.status === 'Done' ? 'opacity-50 grayscale' : ''}`}
                                                         style={{
                                                             left: `${left}px`,
                                                             width: `${width}px`,
-                                                            // 相依性衝突時加紅色粗框
+                                                            // Closed 狀態：透明背景 + 專案顏色虛線外框
+                                                            ...(t.status === 'Closed' ? {
+                                                                backgroundColor: 'rgba(148, 163, 184, 0.3)',
+                                                                border: `3px dashed ${borderColor}`,
+                                                                boxShadow: 'none'
+                                                            } : {}),
+                                                            // 相依性衝突時加紅色粗框 (優先級較高)
                                                             ...(hasConflict ? {
                                                                 border: '3px solid #dc2626',
                                                                 boxShadow: '0 0 8px rgba(220, 38, 38, 0.5)'
                                                             } : {})
                                                         }}
                                                         onClick={() => { setEditingTask(t); setIsModalOpen(true); }}
-                                                        title={`${t.task} (${t.duration}天)${history.length > 1 ? ` | 變更 ${history.length - 1} 次` : ''}${hasConflict ? ' | ⚠️ 相依衝突!' : ''}`}
+                                                        title={`${t.task} (${t.duration}天)${t.status === 'Closed' ? ' | 🚫 不執行' : ''}${history.length > 1 ? ` | 變更 ${history.length - 1} 次` : ''}${hasConflict ? ' | ⚠️ 相依衝突!' : ''}`}
                                                     >
                                                         {t.duration > 2 && <span className="text-[10px] pl-1">{t.owner}</span>}
                                                     </div>
