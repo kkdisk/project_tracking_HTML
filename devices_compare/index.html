@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>機台規格與風險分析看板 (v3.2 Advanced)</title>
+    <title>機台規格與風險分析看板 (v3.3 Advanced)</title>
 
     <!-- 引入必要的 CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -63,7 +63,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, Fragment } = React;
+        const { useState, useEffect, useMemo, useRef, Fragment } = React;
 
         // --- Icons (Inline SVGs to avoid CDN dependency issues) ---
         const IconBase = ({ children, color = "currentColor", size = 24, className = "", ...props }) => (
@@ -97,42 +97,54 @@
         const Info = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></IconBase>;
         const Flame = (props) => <IconBase {...props}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></IconBase>;
         const X = (props) => <IconBase {...props}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></IconBase>;
+        const BarChart3 = (props) => <IconBase {...props}><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></IconBase>;
 
         // --- 風險判讀關鍵字配置 ---
         const RISK_KEYWORDS = {
-            // 高風險：需要立即關注的問題
-            critical: ['不均勻', '嚴重', '手動微調', '對位不易', '失效', 'high risk', 'not fixed', 'issue', 'fail', '漏液', '破裂', '堵塞', '爆開', '損壞', '無法'],
+            // 高風險：重大問題，或有 * 標記的項目
+            critical: ['高風險', '嚴重', 'high risk', '爆開', '損壞', '擊穿', '冒泡'],
             // 中風險：需要注意的問題
-            warning: ['殘留', '影響', '暗角', '需注意', 'warning', '誤差', '風險', '不佳', '缺乏', '較差', '受限'],
-            // 穩定：已解決或無問題的狀態（需排除誤判）
+            warning: ['不均勻', '手動微調', '對位不易', '失效', 'not fixed', 'issue', 'fail', '漏液', '破裂', '堵塞', '無法', '殘留', '影響', '暗角', '需注意', 'warning', '誤差', '風險', '不佳', '缺乏', '較差', '受限', '缺少', '損壞風險'],
+            // 穩定：已解決或無問題的狀態
             stable: ['pass', 'fixed', 'solved', '已修正', '已解決'],
             // 排除詞：當這些詞出現時，不應判定為 stable
             stableExclusions: ['無法', '無效', '無回饋']
         };
 
+        // 風險區塊的標題關鍵字（這些區塊內的項目都會計入風險統計）
+        const RISK_SECTION_KEYWORDS = ['風險', 'issue', 'know issue'];
+
         // --- 輔助函式：風險判讀 ---
-        const analyzeRisk = (rawText) => {
+        const analyzeRisk = (rawText, isInRiskSection = false) => {
             if (rawText === null || rawText === undefined) return { level: 'unknown', variant: 'neutral' };
             const text = String(rawText);
             const lower = text.toLowerCase();
 
-            // Critical - 高風險優先判斷
+            // 檢查是否有 [!] 標記（高風險 - 任何區塊都適用）
+            if (text.includes('[!]')) {
+                return { level: 'critical', variant: 'danger', icon: AlertOctagon };
+            }
+
+            // Critical - 高風險關鍵字
             if (RISK_KEYWORDS.critical.some(kw => lower.includes(kw))) {
                 return { level: 'critical', variant: 'danger', icon: AlertOctagon };
             }
 
-            // Warning - 中風險
+            // Warning - 中風險關鍵字
             if (RISK_KEYWORDS.warning.some(kw => lower.includes(kw))) {
                 return { level: 'warning', variant: 'warning', icon: AlertTriangle };
             }
 
+            // 如果在風險區塊且有內容，至少計入中風險
+            if (isInRiskSection && text.trim().length > 0) {
+                return { level: 'warning', variant: 'warning', icon: AlertTriangle };
+            }
+
             // Stable - 穩定狀態（需先排除誤判情況）
-            // 注意：在風險區塊，有內容通常代表有問題，空白才是最好的
             const hasStableKeyword = RISK_KEYWORDS.stable.some(kw => lower.includes(kw));
             const hasExclusion = RISK_KEYWORDS.stableExclusions.some(kw => lower.includes(kw));
 
             if (hasStableKeyword && !hasExclusion) {
-                // 穩定狀態不顯示圖示，避免打勾造成「已修正」的誤解
                 return { level: 'stable', variant: 'success', icon: null };
             }
 
@@ -189,6 +201,31 @@
 
             // Search State
             const [searchTerm, setSearchTerm] = useState('');
+
+            // Hidden Dashboard State (彩蛋功能)
+            const [showDashboard, setShowDashboard] = useState(false);
+            const logoClickCount = useRef(0);
+            const logoClickTimeout = useRef(null);
+
+            const handleLogoClick = () => {
+                logoClickCount.current++;
+                if (logoClickTimeout.current) clearTimeout(logoClickTimeout.current);
+
+                if (logoClickCount.current >= 5) {
+                    setShowDashboard(true);
+                    logoClickCount.current = 0;
+                    // 顯示解鎖提示
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-lg shadow-lg z-[100] text-sm';
+                    toast.textContent = '🔓 風險總覽已解鎖';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                } else {
+                    logoClickTimeout.current = setTimeout(() => {
+                        logoClickCount.current = 0;
+                    }, 1500);
+                }
+            };
 
             // Toggle Section
             const toggleSection = (title) => {
@@ -330,6 +367,10 @@
                     stats[m.id] = { critical: 0, warning: 0, info: 0 };
                 });
                 sections.forEach(section => {
+                    // 檢查是否為風險區塊
+                    const sectionLower = section.title.toLowerCase();
+                    const isRiskSection = RISK_SECTION_KEYWORDS.some(kw => sectionLower.includes(kw));
+
                     section.rows.forEach(row => {
                         machines.forEach(m => {
                             const text = row.values[m.id];
@@ -337,7 +378,7 @@
                                 // 分割多行內容，每行獨立計算
                                 const lines = String(text).split(/\n|\r|\d+\.\s+/).filter(line => line.trim().length > 0);
                                 lines.forEach(line => {
-                                    const { level } = analyzeRisk(line);
+                                    const { level } = analyzeRisk(line, isRiskSection);
                                     if (level === 'critical') stats[m.id].critical++;
                                     else if (level === 'warning') stats[m.id].warning++;
                                 });
@@ -371,7 +412,11 @@
                     <div className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
                         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
                             <div className="flex items-center gap-4">
-                                <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-200">
+                                <div
+                                    className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-200 cursor-pointer hover:bg-blue-700 transition-colors"
+                                    onClick={handleLogoClick}
+                                    title="點擊 5 次解鎖風險總覽"
+                                >
                                     <FileSpreadsheet className="text-white w-6 h-6" />
                                 </div>
                                 <div>
@@ -387,6 +432,11 @@
                                     <button onClick={() => setActiveTab('heatmap')} className={`px-3 py-2 rounded-md transition-all flex items-center gap-2 ${activeTab === 'heatmap' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                                         <LayoutList size={16} /> 風險熱圖
                                     </button>
+                                    {showDashboard && (
+                                        <button onClick={() => setActiveTab('dashboard')} className={`px-3 py-2 rounded-md transition-all flex items-center gap-2 ${activeTab === 'dashboard' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                                            <BarChart3 size={16} /> 風險總覽
+                                        </button>
+                                    )}
                                     <button onClick={() => setActiveTab('compare')} className={`px-3 py-2 rounded-md transition-all flex items-center gap-2 ${activeTab === 'compare' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                                         <Columns size={16} /> 差異比對
                                     </button>
@@ -629,6 +679,110 @@
                                             </div>
                                         );
                                     })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- VIEW 3: Risk Dashboard --- */}
+                        {activeTab === 'dashboard' && (
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/50 p-6">
+                                <div className="mb-6">
+                                    <h2 className="text-xl font-bold text-slate-800 mb-2">風險統計總覽</h2>
+                                    <p className="text-sm text-slate-500">各機台的高風險（🔴）與中風險（🟡）項目數量分布</p>
+                                </div>
+
+                                {/* 系列篩選 */}
+                                <div className="mb-6 flex items-center gap-2">
+                                    <span className="text-sm text-slate-500">篩選系列:</span>
+                                    {seriesList.map(series => (
+                                        <button key={series} onClick={() => setSelectedSeries(series)}
+                                            className={`px-3 py-1 text-sm rounded-full whitespace-nowrap transition-colors border ${selectedSeries === series ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                                            {series}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* 風險條圖 */}
+                                <div className="space-y-3">
+                                    {visibleMachines.map(m => {
+                                        const stats = machineRiskStats[m.id] || { critical: 0, warning: 0 };
+                                        const total = stats.critical + stats.warning;
+                                        const maxTotal = Math.max(...visibleMachines.map(vm => {
+                                            const s = machineRiskStats[vm.id] || { critical: 0, warning: 0 };
+                                            return s.critical + s.warning;
+                                        }), 1);
+                                        const criticalWidth = (stats.critical / maxTotal) * 100;
+                                        const warningWidth = (stats.warning / maxTotal) * 100;
+
+                                        return (
+                                            <div key={m.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                                                <div className="w-48 shrink-0">
+                                                    <div className="font-medium text-slate-800 text-sm">{m.name}</div>
+                                                    <div className="text-[10px] text-slate-400 font-mono">{m.id}</div>
+                                                    <span className={`inline-flex mt-1 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider ${m.series === 'Alpha' ? 'bg-blue-100 text-blue-700' : m.series === 'Beta' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                        {m.series}
+                                                    </span>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="h-6 bg-slate-200 rounded-full overflow-hidden flex">
+                                                        {stats.critical > 0 && (
+                                                            <div
+                                                                className="bg-red-500 h-full flex items-center justify-center text-white text-xs font-bold transition-all"
+                                                                style={{ width: `${criticalWidth}%`, minWidth: stats.critical > 0 ? '24px' : '0' }}
+                                                                title={`高風險: ${stats.critical}`}
+                                                            >
+                                                                {stats.critical}
+                                                            </div>
+                                                        )}
+                                                        {stats.warning > 0 && (
+                                                            <div
+                                                                className="bg-amber-400 h-full flex items-center justify-center text-white text-xs font-bold transition-all"
+                                                                style={{ width: `${warningWidth}%`, minWidth: stats.warning > 0 ? '24px' : '0' }}
+                                                                title={`中風險: ${stats.warning}`}
+                                                            >
+                                                                {stats.warning}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="w-24 text-right shrink-0">
+                                                    <span className="text-red-600 font-bold">🔴 {stats.critical}</span>
+                                                    <span className="mx-2 text-slate-300">|</span>
+                                                    <span className="text-amber-600 font-bold">🟡 {stats.warning}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* 總計 */}
+                                <div className="mt-6 pt-6 border-t border-slate-200">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="bg-red-50 border border-red-100 rounded-lg p-4 text-center">
+                                            <div className="text-3xl font-bold text-red-600">
+                                                {visibleMachines.reduce((sum, m) => sum + (machineRiskStats[m.id]?.critical || 0), 0)}
+                                            </div>
+                                            <div className="text-sm text-red-600/70 mt-1">高風險總數</div>
+                                        </div>
+                                        <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 text-center">
+                                            <div className="text-3xl font-bold text-amber-600">
+                                                {visibleMachines.reduce((sum, m) => sum + (machineRiskStats[m.id]?.warning || 0), 0)}
+                                            </div>
+                                            <div className="text-sm text-amber-600/70 mt-1">中風險總數</div>
+                                        </div>
+                                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
+                                            <div className="text-3xl font-bold text-slate-600">
+                                                {visibleMachines.length}
+                                            </div>
+                                            <div className="text-sm text-slate-500 mt-1">機台數量</div>
+                                        </div>
+                                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-center">
+                                            <div className="text-3xl font-bold text-blue-600">
+                                                {sections.reduce((sum, s) => sum + s.rows.length, 0)}
+                                            </div>
+                                            <div className="text-sm text-blue-600/70 mt-1">規格項目數</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
