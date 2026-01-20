@@ -3,6 +3,8 @@ import json
 import os
 import glob
 import sys
+import re
+from datetime import datetime
 
 # Configuration
 HTML_FILE = 'index.html'
@@ -36,6 +38,14 @@ def update_default_data(excel_path):
         # Convert to list of lists (2D array)
         data = df.values.tolist()
         
+        # Preprocess: Replace actual newlines in cell values with escaped \\n
+        # This is critical because Excel cells may contain line breaks
+        for i, row in enumerate(data):
+            for j, cell in enumerate(row):
+                if isinstance(cell, str) and ('\n' in cell or '\r' in cell):
+                    # Replace actual newlines with escaped newline sequence
+                    data[i][j] = cell.replace('\r\n', '\\n').replace('\r', '\\n').replace('\n', '\\n')
+        
         # Convert to JSON string
         new_data_str = json.dumps(data, ensure_ascii=False)
         
@@ -52,30 +62,29 @@ def update_default_data(excel_path):
              return False
 
         with open(HTML_FILE, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
+            content = f.read()
         
-        new_lines = []
-        found = False
-        
-        for line in lines:
-            # Look for the specific line defining defaultData
-            if line.strip().startswith('const defaultData = [['):
-                # Preserve indentation
-                indentation = line[:line.find('const')]
-                new_line = f'{indentation}const defaultData = {new_data_str};\n'
-                new_lines.append(new_line)
-                found = True
-                print("Found and replaced 'defaultData' variable.")
-            else:
-                new_lines.append(line)
-        
-        if not found:
+        # Update defaultData - use DOTALL flag to match across newlines
+        default_data_pattern = r'const defaultData = \[\[.*?\]\];'
+        if re.search(default_data_pattern, content, re.DOTALL):
+            content = re.sub(default_data_pattern, f'const defaultData = {new_data_str};', content, flags=re.DOTALL)
+            print("Found and replaced 'defaultData' variable.")
+        else:
             print(f"Error: Could not find 'const defaultData = [[' line in {HTML_FILE}.")
             return False
+        
+        # Update DATA_UPDATE_DATE with today's date
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        date_pattern = r'const DATA_UPDATE_DATE = "[^"]+";'
+        if re.search(date_pattern, content):
+            content = re.sub(date_pattern, f'const DATA_UPDATE_DATE = "{today_str}";', content)
+            print(f"Updated DATA_UPDATE_DATE to: {today_str}")
+        else:
+            print("Warning: Could not find DATA_UPDATE_DATE variable.")
             
         # Write changes back to file
         with open(HTML_FILE, 'w', encoding='utf-8') as f:
-            f.writelines(new_lines)
+            f.write(content)
             
         print("Successfully updated index.html")
         return True

@@ -97,24 +97,45 @@
         const Info = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></IconBase>;
         const Flame = (props) => <IconBase {...props}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></IconBase>;
 
+        // --- 風險判讀關鍵字配置 ---
+        const RISK_KEYWORDS = {
+            // 高風險：需要立即關注的問題
+            critical: ['不均勻', '嚴重', '手動微調', '對位不易', '失效', 'high risk', 'not fixed', 'issue', 'fail', '漏液', '破裂', '堵塞', '爆開', '損壞', '無法'],
+            // 中風險：需要注意的問題
+            warning: ['殘留', '影響', '暗角', '需注意', 'warning', '誤差', '風險', '不佳', '缺乏', '較差', '受限'],
+            // 穩定：已解決或無問題的狀態（需排除誤判）
+            stable: ['pass', 'fixed', 'solved', '已修正', '已解決'],
+            // 排除詞：當這些詞出現時，不應判定為 stable
+            stableExclusions: ['無法', '無效', '無回饋']
+        };
+
         // --- 輔助函式：風險判讀 ---
         const analyzeRisk = (rawText) => {
             if (rawText === null || rawText === undefined) return { level: 'unknown', variant: 'neutral' };
             const text = String(rawText);
             const lower = text.toLowerCase();
 
-            // Critical
-            if (lower.includes('不均勻') || lower.includes('嚴重') || lower.includes('手動微調') || lower.includes('對位不易') || lower.includes('失效') || lower.includes('high risk') || lower.includes('not fixed') || lower.includes('issue') || lower.includes('fail') || lower.includes('漏液')) {
+            // Critical - 高風險優先判斷
+            if (RISK_KEYWORDS.critical.some(kw => lower.includes(kw))) {
                 return { level: 'critical', variant: 'danger', icon: AlertOctagon };
             }
-            // Warning
-            if (lower.includes('殘留') || lower.includes('影響') || lower.includes('暗角') || lower.includes('需注意') || lower.includes('warning') || lower.includes('誤差')) {
+
+            // Warning - 中風險
+            if (RISK_KEYWORDS.warning.some(kw => lower.includes(kw))) {
                 return { level: 'warning', variant: 'warning', icon: AlertTriangle };
             }
-            // Stable
-            if (lower.includes('無') || lower.includes('均勻') || lower.includes('自動') || lower.includes('標準') || lower.includes('優化') || lower.includes('pass') || lower.includes('fixed') || lower.includes('solved') || lower.includes('正常')) {
-                return { level: 'stable', variant: 'success', icon: CheckCircle };
+
+            // Stable - 穩定狀態（需先排除誤判情況）
+            // 注意：在風險區塊，有內容通常代表有問題，空白才是最好的
+            const hasStableKeyword = RISK_KEYWORDS.stable.some(kw => lower.includes(kw));
+            const hasExclusion = RISK_KEYWORDS.stableExclusions.some(kw => lower.includes(kw));
+
+            if (hasStableKeyword && !hasExclusion) {
+                // 穩定狀態不顯示圖示，避免打勾造成「已修正」的誤解
+                return { level: 'stable', variant: 'success', icon: null };
             }
+
+            // 預設：一般資訊，無特殊標示
             return { level: 'info', variant: 'neutral', icon: null };
         };
 
@@ -179,358 +200,402 @@
                 setCollapsedSections(new Set(allTitles));
             };
 
+            // --- 版本與資料來源資訊 ---
+            const APP_VERSION = "v3.3";
+            const DATA_SOURCE = "預設資料";
+            const DATA_UPDATE_DATE = "2026-01-20";
+
             // 預設載入資料 (此處保留原有的 Default Data)
             useEffect(() => {
                 const defaultData = [["機台ID", "CP5880A2-240001", "CP5880A2-240003", "CP5880A2-240005", "CP5880A2-240004", "Alpha-Golden", "CP5880A3-240002", "CP5880B1-250005", "CP5880A3-250001", "CP5880B1-250004", "CP5880B1-250003", "簡易機台V2.0", "Simple-Golden", "CP5880B2-250001", "簡易機台V1.1", "CP5880B3-250001", "CP5880B3-250002", "Beta-Golden"], ["機台編號", "Alpha 機台V1.1", "Alpha 機台V2.0", "Alpha 機台V2.1", "Alpha 機台V2.2", "Alpha-Golden", "簡易機台V1.1", "簡易機台V1.1 Genentech 特規機", "簡易機台V1.1 CKSX 改機", "簡易機台V2.0 CKSX 改機", "簡易機台V2.0 CKSX 改機", "簡易機台V2.0", "Simple-Golden", "Libprep 機台", "簡易機台V1.1", "Libprep 機台", "Libprep 機台", "Beta-Golden"], ["機台類型", "Alpha", "Alpha", "Alpha", "Alpha", "Alpha", "simple", "simple", "simple", "simple", "simple", "simple", "simple", "Beta", "simple", "Beta", "Beta", "Beta"], ["機台名稱", "1006冰箱", "1006走道", "1006窗邊", "Stanford", "Alpha-Golden", "Jamstec", "", "第一台", "第二台之後", "第二台之後", "1006兩台", "Simple-Golden", "小白1", "聖凱旁", "小白2", "Genentech 機台", "Beta-Golden"], ["溫度版本", "H1.0", "H1.0", "H1.0", "H2.0.1", "H2.0.1", "H2.0", "", "H2.0", "H2.0", "H2.0", "", "H2.0", "H2.0", "H2.1", "H2.1", "H2.1", "H2.1"], ["升溫速度（Max）", "4℃/s", "4℃/s", "4℃/s", "4℃/s", "4℃/s", "4℃/s", "", "4℃/s", "4℃/s", "4℃/s", "", "4℃/s", "4℃/s", "4℃/s", "4℃/s", "4℃/s", "4℃/s"], ["降溫速度（Max）", "1.5℃/s", "1.5℃/s", "1.5℃/s", "4℃/s", "4℃/s", "4℃/s", "", "4℃/s", "4℃/s", "4℃/s", "", "4℃/s", "4℃/s", "1.5℃/s", "4℃/s", "4℃/s", "4℃/s"], ["溫度範圍", "0~100 ℃", "0~100 ℃", "0~100 ℃", "0~100 ℃", "0~100 ℃", "0~100 ℃", "", "0~100 ℃", "0~100 ℃", "0~100 ℃", "", "0~100 ℃", "0~100 ℃", "0~100 ℃", "0~100 ℃", "0~100 ℃", "0~100 ℃"], ["溫度調控面積", "18 x18 mm2", "18 x18 mm2", "18 x18 mm2", "30 x30 mm2, 30 x22mm2", "30 x30 mm2, 30 x22mm2", "30 x 30 mm2", "", "30 x 30 mm2", "30 x 30 mm2", "30 x 30 mm2", "", "30 x 30 mm2", "30 x 30 mm2", "30 x 30 mm2", "30 x 30 mm2", "30 x 30 mm2", "30 x 30 mm2"], ["溫度均勻性（Block）", "±0.5℃", "±0.5℃", "±0.5℃", "±0.5℃", "±0.5℃", "±0.5℃", "", "±0.5℃", "±0.5℃", "±0.5℃", "", "±0.5℃", "±0.5℃", "±0.5℃", "±0.5℃", "±0.5℃", "±0.5℃"], ["溫度均勻性（Chip）", "±2℃", "±2℃", "±2℃", "±2℃", "±2℃", "±2℃", "", "±2℃", "±2℃", "±2℃", "", "±2℃", "±1℃", "±2℃", "±2℃", "±1℃", "±1℃"], ["側邊降溫系統", "", "", "", "", "", "", "", "", "", "", "", "", "有（V2.0）", "", "有（V3.0）", "", ""], ["溫度均勻性:", "", "", "", "", "", "", "", "", "", "", "", "", "±1℃", "", "", "±1℃", "±1℃"], ["溫度範圍:", "", "", "", "", "", "", "", "", "", "", "", "", "0 ~ 80 ℃", "", "", "0 ~ 80 ℃", "0 ~ 80 ℃"], ["降溫速度:", "", "", "", "", "", "", "", "", "", "", "", "", "30秒內25℃降至4℃", "", "", "30秒內25℃降至4 ℃", "30秒內25℃降至4 ℃"], ["磁區", "M1.0", "", "M1.0", "M2.1", "M2.1", "M4.0", "", "M2.1", "M2.2", "M2.2", "", "M4.0", "M3.0", "M1.0", "M3.2", "M3.2", "M3.2"], ["升降方式", "氣動式升降平台", "", "氣動式升降平台", "氣動式升降平台", "氣動式升降平台", "氣動式升降平台", "", "氣動式升降平台", "氣動式升降平台", "氣動式升降平台", "", "氣動式升降平台", "氣動式升降平台", "氣動式升降平台", "氣動式升降平台", "氣動式升降平台", "氣動式升降平台"], ["載台版本", "Alpha V1.2", "Alpha V1.2 晶片承載槽 大孔", "Alpha V1.2 晶片承載槽 大孔", "Alpha V1.2 晶片承載槽 大孔", "Alpha V1.2 晶片承載槽 大孔", "5880", "", "5880 V2", "5880 V2", "5880 V2", "", "5880 V2", "5880 V3(需放晶片框)", "6880/6890", "5880 V3(需放晶片框)", "5880/6880/6809 V3(需放晶片框)", "5880/6880/6809 V3(需放晶片框)"], ["晶片連接方式", "滑軌連接", "滑軌連接", "滑軌連接", "滑軌連接", "滑軌連接", "手動 toggle clamp", "", "手動 toggle clamp", "手動 toggle clamp", "手動 toggle clamp", "", "手動 toggle clamp", "汽缸下壓", "手動 toggle clamp", "汽缸下壓", "汽缸下壓", "汽缸下壓"], ["卡匣系統", "", "", "", "", "", "", "", "", "", "", "", "", "V2.0系統", "", "V3.7系統", "", ""], ["下壓懸臂", "懸臂需用墊片調整", "懸臂可用指腹螺絲調整", "懸臂可用指腹螺絲調整", "懸臂可用指腹螺絲調整", "懸臂可用指腹螺絲調整", "", "", "", "", "", "", "", "", "", "", "", ""], ["濾片轉盤", "V", "V", "V", "V", "V", "", "", "", "", "", "", "", "", "", "", "V", "V"], ["CCD光源顏色", "白", "綠", "白", "綠", "白", "白", "白", "白", "白", "白", "白", "白", "白", "綠", "白", "白", "白"], ["螢光型式", "投射燈四色 F1.0", "投射燈四色 F1.0", "", "投射燈四色 F1.0", "投射燈四色 F1.0", "", "", "", "", "", "", "", "", "", "", "投射燈四色 F1.0", "投射燈四色 F1.0"], ["背光Alignment key燈", "", "", "", "", "", "", "", "O AL1.0", "O AL1.0", "O AL1.0", "O AL1.0", "O AL1.0", "O AL1.0", "", "O AL1.0", "O AL1.1", "O AL1.1"], ["燈板", "固定燈板 L1.0", "固定燈板 L1.0", "固定燈板 L1.0", "固定燈板 L1.0", "固定燈板 L1.0", "左掀式燈板 L1.0", "左掀式燈板 L1.0", "左掀式燈板 L1.0", "左掀式燈板 L1.0", "左掀式燈板 L1.0", "左掀式燈板 L1.0", "左掀式燈板 L1.0", "後掀式燈板 L1.0", "左掀式燈板 L1.0", "後掀式燈板 L1.0", "後掀式燈板 L1.0", "後掀式燈板 L1.0"], ["外殼設計", "較窄外殼 CA1.0", "較寬外殼 CA2.0", "較寬板金外殼 CA2.1", "較寬板金外殼 CA2.1", "較寬板金外殼 CA2.1", "無外殼設計", "無外殼設計", "無外殼設計", "無外殼設計", "無外殼設計", "無外殼設計", "無外殼設計", "CB1.0", "無外殼設計", "CB1.0", "CB1.0", "CB1.0"], ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["平衡氣壓計", "晶片下", "晶片下", "晶片下", "晶片下", "晶片下", "晶片下", "晶片下", "", "", "", "晶片下", "晶片下", "晶片上", "", "晶片上", "晶片上", "晶片上"], ["P-sensor", "", "", "可以online校正氣壓值", "可以online校正氣壓值", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["電控軟體版號", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["電控箱版本", "", "", "", "", "", "V1.1\n2* slider board\n2* power board", "V1.1", "V1.1", "V2.0", "V2.0", "V2.0", "V2.0", "V2.0", "V1.0", "", "", ""], ["電控(接頭)連接", "", "", "", "", "", "部分可分離", "部分可分離", "部分可分離", "可分離式設計", "可分離式設計", "可分離式設計", "可分離式設計", "可分離式設計", "連接", "", "", ""], ["Power", "500W 100~240V", "500W 100~240V", "500W 100~240V", "500W 100~240V", "500W 100~240V", "500W 100~240V", "500W 100~240V", "500W 100~240V", "500W 100~240V", "500W 100~240V", "500W 100~240V", "500W 100~240V", "600W 100~240V 醫規電源", "500W 100~240V", "600W 100~240V 醫規電源", "600W 100~240V 醫規電源", "600W 100~240V 醫規電源"], ["Power 外殼", "", "", "", "", "", "壓克力鋁擠", "壓克力鋁擠", "板金外殼", "板金外殼", "板金外殼", "板金外殼", "板金外殼", "板金外殼", "壓克力鋁擠", "", "", ""], ["電控方式", "V1.5", "V1.5", "V1.5", "V1.5", "V1.5", "V1.5", "V1.5", "V1.5", "V1.5", "V1.5", "V1.5", "V1.5", "V2.0", "V2.0", "V2.0", "V2.0", "V2.0"], ["power board issue", "Fixed", "Fixed", "Fixed", "Fixed", "Fixed", "Fixed", "not Fixed", "", "Fixed", "Fixed", "not Fixed", "Fixed", "not Fixed", "Fixed", "Fixed", "Fixed", "Fixed"], ["Heater Control", "PWM", "PWM", "PWM", "RS485", "RS485", "RS485", "PWM", "", "RS485", "RS232", "PWM", "RS485", "RS485", "mcu", "mcu", "mcu", "mcu"], ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["流道系統型號", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["流道版本", "16路流道for 30洞晶片無卡夾", "16路流道for 30洞晶片無卡夾", "16路流道for 30洞晶片無卡夾", "16路流道for 30洞晶片無卡夾", "16路流道for 30洞晶片無卡夾", "16路流道for 30洞晶片卡夾", "", "", "", "", "", "", "16路流道for 30洞晶片卡夾", "16路流道for 30洞晶片無卡夾", "16路流道for 30洞晶片卡夾", "48路流道for 60洞晶片無卡夾", "16路流道for 30洞晶片卡夾"], ["流道試劑填充", "tube水庫手動pipette", "tube水庫手動pipette", "tube水庫手動pipette", "tube水庫手動pipette", "tube水庫手動pipette", "tube水庫+晶片卡夾手動pipette", "", "", "", "", "", "", "tube水庫+晶片卡夾手動pipette", "tube水庫手動pipette", "tube水庫+晶片卡夾手動pipette", "48孔盤手動pipette", "tube水庫+晶片卡夾手動pipette"], ["流道出樣方式", "collect試管", "collect試管", "collect試管", "collect試管", "collect試管", "collect試管+晶片卡夾", "", "", "", "", "", "", "collect試管+晶片卡夾", "collect試管", "collect試管+晶片卡夾", "collect試管", "collect試管+晶片卡夾"], ["流道進樣道數", "tube進樣*15", "tube進樣*15", "tube進樣*15", "tube進樣*15", "tube進樣*15", "tube進樣*8 + 晶片卡夾*12", "", "", "", "", "", "", "tube進樣*8 + 晶片卡夾*5 + 混合*7", "tube進樣*15", "tube進樣*8 + 晶片卡夾*5 + 混合*7", "孔盤進樣*48", "tube進樣*8 + 晶片卡夾*5 + 混合*7"], ["流道出樣道數", 2, 2, 2, 2, 2, "試管*2 + 晶片卡夾*12", "", "", "", "", "", "", "試管*2 + 晶片卡夾*12", "試管*2 + 晶片卡夾*12", "試管*2 + 晶片卡夾*12", 4, "試管*2 + 晶片卡夾*12"], ["流道檢測", "液通自動, 氣密手動", "液通自動, 氣密手動", "液通自動, 氣密手動", "液通自動, 氣密手動", "液通自動, 氣密手動", "液通自動, 氣密手動", "", "", "", "", "", "", "液通自動, 氣密手動", "液通自動, 氣密手動", "液通自動, 氣密手動", "液通自動, 氣密手動", "液通自動, 氣密手動"], ["流道材質", "正常版藍色PC貼合", "正常版壓克力貼合", "正常版藍色PC貼合", "正常版透明PC貼合", "正常版藍色PC貼合", "正常版藍色PC貼合", "", "", "", "", "", "", "正常版透明PC貼合", "正常版透明PC貼合", "正常版藍色PC貼合", "正常版藍色PC貼合+Peek CNC", "正常版藍色PC貼合"], ["流道注水頭型式", "正常版藍色PC貼合", "正常版透明PC貼合", "正常版藍色PC貼合", "正常版透明PC貼合", "正常版藍色PC貼合", "正常版藍色PC貼合", "", "", "", "", "", "", "正常版透明PC貼合", "正常版透明PC貼合", "正常版藍色PC貼合", "Peek CNC", "正常版藍色PC貼合"], ["流道卡夾", "無", "無", "無", "無", "無", "一體式卡夾", "", "", "", "", "", "", "一體式卡夾", "無", "分離式卡夾", "無", "分離式卡夾"], ["晶片壓力sensor", "短接頭, 無矽油防護", "短接頭, 無矽油防護", "長接頭, 無矽油防護", "短接頭, 無矽油防護", "短接頭, 無矽油防護", "短接頭, 無矽油防護", "", "", "", "", "", "", "短接頭, 無矽油防護", "短接頭, 無矽油防護", "短接頭, 無矽油防護", "短接頭, 無矽油防護", "短接頭, 無矽油防護"], ["流道清潔", "進樣道自動, 出樣道自動", "進樣道自動, 出樣道自動", "進樣道自動, 出樣道自動", "進樣道自動, 出樣道自動", "進樣道自動, 出樣道自動", "進樣道自動, 出樣道自動", "", "", "", "", "", "", "進樣道自動, 出樣道自動", "進樣道自動, 出樣道自動", "進樣道自動, 出樣道自動", "進樣道自動, 出樣道自動", "進樣道自動, 出樣道自動"], ["流道清潔定量", "無", "無", "無", "無", "無", "無", "", "", "", "", "", "", "無", "無", "無", "有", "無"], ["流道清潔液最大數量", 3, 3, 3, 3, 3, 3, "", "", "", "", "", "", 3, 3, 3, 3, 3], ["流道進樣體積修正前精度", "進流速3000ul/分, 60ul", "進流速3000ul/分, 60ul", "進流速3000ul/分, 60ul", "進流速3000ul/分, 60ul", "進流速3000ul/分, 60ul", "tube道進流速3000ul/分, 60ul; 卡夾道進樣2ul", "", "", "", "", "", "", "tube道進流速3000ul/分, 60ul; 卡夾道進樣2ul", "進流速3000ul/分, 60ul", "tube道進流速3000ul/分, 60ul; 卡夾道進樣2ul", "試劑一次全進 ", "tube道進流速3000ul/分, 60ul; 卡夾道進樣2ul"], ["流道進樣體積修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正", "晶片上修正"], ["流道進樣體積修正精度", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)", "Error<10% (小於1ul: 0.1ul, 大於10ul: 0.5ul)"], ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["已知風險", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], ["溫控模組 ", "1. 升溫曲線較差。 \n2. 無主動降溫。 \n3. 一次只能加熱一顆。 ", "1. 升溫曲線較差。 \n2. 無主動降溫。 \n3. 一次只能加熱一顆。 ", "1. 升溫曲線較差。 \n2. 無主動降溫。 \n3. 一次只能加熱一顆。 ", "1. 溫控核心與 H2.0 幾乎等同。 \n2. 靠門側面積縮小以避免機構干涉。\n3. 均勻性尚未達到1度\n4. 兩顆Heater底部共用散熱模組，無法兩顆同時長時間低溫保存", "1. 溫控核心與 H2.0 幾乎等同。 \n2. 靠門側面積縮小以避免機構干涉。\n3. 均勻性尚未達到1度\n4. 兩顆Heater底部共用散熱模組，無法兩顆同時長時間低溫保存", "1. 機構工差較大，對位精準度受限。 \n2. 均勻性尚未達到1度", "", "", "", "", "", "1. 機構工差較大，對位精準度受限。 \n2. 均勻性尚未達到1度", "1. 機構工差較大，對位精準度受限。 \n2. 均勻性尚未達到1度\n3. 兩顆Heater底部共用散熱模組，無法兩顆同時長時間低溫保存", "1. 機構工差較大，對位精準度受限。 \n2. 均勻性尚未達到1度", "1. 機構工差較大，對位精準度受限。 \n2. 均勻性尚未達到1度", "1. 機構工差較大，對位精準度受限。 \n2. 均勻性尚未達到1度", "1. 機構工差較大，對位精準度受限。 \n2. 均勻性尚未達到1度"], ["磁模組", "1. 不耐熱，配合 H2 Heater 高溫會爆開。\n2. 氣壓升降慢 \n3. 黑白格影響畫面品質。 \n4. 磁鐵升降缺乏狀態回饋。 ", "", "1. 不耐熱，配合 H2 Heater 高溫會爆開。\n2. 氣壓升降慢 \n3. 黑白格影響畫面品質。 \n4. 磁鐵升降缺乏狀態回饋。 ", "1. 氣壓升降慢 \n2. 黑白格影響畫面品質。 \n3. 磁鐵升降缺乏狀態回饋。 ", "1. 氣壓升降慢 \n2. 黑白格影響畫面品質。 \n3. 磁鐵升降缺乏狀態回饋。 ", "1. 氣壓升降慢 \n2. 黑白格影響畫面品質。 \n3. 磁鐵升降缺乏狀態回饋。 ", "", "1. 磁鐵升降缺乏狀態回饋。 ", "1. 磁鐵升降缺乏狀態回饋。 ", "1. 磁鐵升降缺乏狀態回饋。 ", "", "1. 磁鐵升降缺乏狀態回饋。 ", "1. 磁鐵升降缺乏狀態回饋。 \n2. 非常偶發會遇到磁汽缸無法上升，10秒氣壓還未升至目標值", "1. 不耐熱，配合 H2 Heater 高溫會爆開。 \n2. 黑白格影響畫面品質。 \n3. 磁鐵升降缺乏狀態回饋。 ", "1. 磁鐵升降缺乏狀態回饋。 ", "1. 磁鐵升降缺乏狀態回饋。 \n2. 非常偶發會遇到磁汽缸無法上升，10秒氣壓還未升至目標值", "1. 磁鐵升降缺乏狀態回饋。 "], ["感測器與電子控制", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. I2C Error 需hard reset 系統電源\n2. P Sensor 無法抗矽油，有不定期損壞風險", "1. P Sensor 無法抗矽油，有不定期損壞風險", "1. P Sensor 無法抗矽油，有不定期損壞風險", "1. P Sensor 無法抗矽油，有不定期損壞風險", "1. P Sensor 無法抗矽油，有不定期損壞風險", "1. P Sensor 無法抗矽油，有不定期損壞風險"], ["機構設計", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 ", "1. 熱磁與晶片框交互高度需手動微調 \n2. 晶片與 POGO 對位不易 "], ["光源設計", "1. 螢光光照不均勻，影響螢光檢測結果。 ", "1. 螢光光照不均勻，影響螢光檢測結果。 ", "", "1. 螢光光照不均勻，影響螢光檢測結果。 ", "1. 螢光光照不均勻，影響螢光檢測結果。 ", "", "", "", "", "", "", "", "", "", "", "", ""], ["流道模組", "1. PC貼合流道有破裂風險, 需使用加長加厚版藍色PC\n2. tube水庫加試劑不易操作, 有鬆脫風險\n3. tube水庫底部試劑殘留\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流", "1. 流道氣密不佳, 需使用加長加厚版藍色PC\n2. tube水庫加試劑不易操作, 有鬆脫風險\n3. tube水庫底部試劑殘留\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流", "1. PC貼合流道有破裂風險, 需使用加長加厚版藍色PC\n2. tube水庫加試劑不易操作, 有鬆脫風險\n3. tube水庫底部試劑殘留\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流", "1. PC貼合流道有破裂風險, 需使用加長加厚版藍色PC\n2. tube水庫加試劑不易操作, 有鬆脫風險\n3. tube水庫底部試劑殘留\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流\n8. 廢液道使用oring環達到氣密, oring環有堵塞風險 ", "1. PC貼合流道有破裂風險, 需使用加長加厚版藍色PC\n2. tube水庫加試劑不易操作, 有鬆脫風險\n3. tube水庫底部試劑殘留\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流", "1. PC貼合流道有破裂風險, 需使用加長加厚版藍色PC\n2. tube水庫加試劑不易操作, 有鬆脫風險\n3. tube水庫底部試劑殘留\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流\n8. 卡夾夾住管道風險\n9. 開蓋時，卡夾可能漏液\n10. 高速回抽時，卡夾試劑可能觸碰注水頭", "", "", "", "", "", "", "1. PC貼合流道有破裂風險, 需使用加長加厚版藍色PC\n2. tube水庫加試劑不易操作, 有鬆脫風險\n3. tube水庫底部試劑殘留\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流\n8. 卡夾夾住管道風險\n9. 開蓋時，卡夾可能漏液\n10. 高速回抽時，卡夾試劑可能觸碰注水頭", "1. PC貼合流道有破裂風險, 需使用加長加厚版藍色PC\n2. tube水庫加試劑不易操作, 有鬆脫風險\n3. tube水庫底部試劑殘留\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流", "1. PC貼合流道有破裂風險, 需使用加長加厚版藍色PC\n2. tube水庫加試劑不易操作, 有鬆脫風險\n3. tube水庫底部試劑殘留\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流\n8. 開蓋時，卡夾可能漏液\n9. 高速回抽時，卡夾試劑可能觸碰注水頭", "1. PC貼合流道有破裂風險, 需使用加長加厚版藍色PC\n2. 孔盤進樣帶大量空氣\n3. 孔盤進樣最高流速約1200ul/分鐘\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流", "1. PC貼合流道有破裂風險, 需使用加長加厚版藍色PC\n2. tube水庫加試劑不易操作, 有鬆脫風險\n3. tube水庫底部試劑殘留\n4. 出樣產物帶大量矽油\n5. 進樣煞停過慢, 多餘試劑進晶片\n6. 部分流道自檢需手動操作\n7. 廢液無分流\n8. 開蓋時，卡夾可能漏液\n9. 高速回抽時，卡夾試劑可能觸碰注水頭"], ["清潔/殘留風險", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : ", "1. 熱壓軟墊杯口殘留\n2. 系統殘留量 : "], ["其它特定風險 ", "", "", "", "", "", "", "", "", "", "", "", "", "1. FPGA 有陣子會造成晶片連續冒泡擊穿\n2. 此台通風系統非B2後版本，無法兩顆HEATER皆低溫，有機台散熱風險\n", "", "", "1. FPGA 有陣子會造成晶片連續冒泡擊穿，換FPGA子板後修正", ""], ["軟體 know issue", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n", "1. 高 Loading 導致 Camera Delay，影響即時影像觀測。 \n\n"], ["晶片 know issue", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移", "1. 晶片殘留&邊界&飄移"]];
-            processExcel(defaultData);
-        }, []);
+                processExcel(defaultData);
+            }, []);
 
-        const handleFileUpload = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            setFileName(file.name);
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                try {
-                    const wb = XLSX.read(evt.target.result, { type: 'binary' });
-                    const ws = wb.Sheets[wb.SheetNames[0]];
-                    processExcel(XLSX.utils.sheet_to_json(ws, { header: 1 }));
-                } catch (error) {
-                    console.error("Error:", error);
-                    alert("檔案解析失敗");
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setFileName(file.name);
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        processExcel(XLSX.utils.sheet_to_json(ws, { header: 1 }));
+                    } catch (error) {
+                        console.error("Error:", error);
+                        alert("檔案解析失敗");
+                    }
+                };
+                reader.readAsBinaryString(file);
+            };
+
+            const processExcel = (rows) => {
+                if (!rows || rows.length < 2) return;
+
+                // 1. Identify Header & Matches logic from v3.0
+                let headerRowIndex = rows.findIndex(row => row && String(row[0]).includes('機台ID'));
+                if (headerRowIndex === -1) headerRowIndex = 0;
+
+                const headerRow = rows[headerRowIndex];
+                const colCount = headerRow.length;
+                const nameRowIndex = rows.findIndex((r, i) => i > headerRowIndex && r[0] && String(r[0]).includes('機台名稱'));
+                const typeRowIndex = rows.findIndex((r, i) => i > headerRowIndex && r[0] && String(r[0]).includes('機台類型'));
+
+                const extractedMachines = [];
+                for (let c = 1; c < colCount; c++) {
+                    const id = headerRow[c];
+                    if (!id) continue;
+                    let name = id;
+                    if (nameRowIndex !== -1 && rows[nameRowIndex][c]) name = rows[nameRowIndex][c];
+                    let series = 'Other';
+                    if (typeRowIndex !== -1 && rows[typeRowIndex][c]) {
+                        series = String(rows[typeRowIndex][c]).trim();
+                    } else {
+                        const combined = String(id) + String(name);
+                        if (combined.includes('Alpha')) series = 'Alpha';
+                        else if (combined.includes('Simple') || combined.includes('簡易')) series = 'Simple';
+                        else if (combined.includes('Beta')) series = 'Beta';
+                    }
+                    extractedMachines.push({ id: String(id), name: String(name), series, colIndex: c });
+                }
+
+                // 2. Extract Sections & Rows
+                const extractedSections = [];
+                let currentSection = { title: '基本規格', rows: [] };
+
+                for (let r = headerRowIndex + 1; r < rows.length; r++) {
+                    const rowData = rows[r];
+                    let key = rowData ? (rowData[0] ? String(rowData[0]).trim() : "") : "";
+                    if (!key) continue;
+
+                    // Skip metadata rows we handled
+                    if (key.includes('機台名稱') || key.includes('機台編號') || key.includes('機台類型')) continue;
+
+                    let isImportant = false;
+                    if (key.startsWith('*')) {
+                        isImportant = true;
+                        key = key.substring(1).trim();
+                    }
+
+                    // Collect Values
+                    let isRowEmpty = true;
+                    const values = {};
+                    extractedMachines.forEach(m => {
+                        const val = rowData[m.colIndex];
+                        if (val !== undefined && val !== null && String(val).trim() !== '') {
+                            isRowEmpty = false;
+                        }
+                        values[m.id] = val;
+                    });
+
+                    // Determine if Section Header
+                    // Definition: Key exists, but All Values Empty.
+                    // Special case: if isRowEmpty is true, we treat it as section header.
+                    if (isRowEmpty) {
+                        // Push old section if it has rows
+                        if (currentSection.rows.length > 0) {
+                            extractedSections.push(currentSection);
+                        }
+                        // Start new section
+                        currentSection = { title: key, rows: [] };
+                    } else {
+                        currentSection.rows.push({ key, values, isImportant });
+                    }
+                }
+                // Push last section
+                if (currentSection.rows.length > 0) {
+                    extractedSections.push(currentSection);
+                }
+
+                setMachines(extractedMachines);
+                setSections(extractedSections);
+
+                if (extractedMachines.length >= 2) {
+                    setCompareA(extractedMachines[0].id);
+                    setCompareB(extractedMachines[1].id);
                 }
             };
-            reader.readAsBinaryString(file);
-        };
 
-        const processExcel = (rows) => {
-            if (!rows || rows.length < 2) return;
+            const visibleMachines = selectedSeries === 'All' ? machines : machines.filter(m => m.series === selectedSeries);
+            const seriesList = ['All', ...new Set(machines.map(m => m.series))];
 
-            // 1. Identify Header & Matches logic from v3.0
-            let headerRowIndex = rows.findIndex(row => row && String(row[0]).includes('機台ID'));
-            if (headerRowIndex === -1) headerRowIndex = 0;
-
-            const headerRow = rows[headerRowIndex];
-            const colCount = headerRow.length;
-            const nameRowIndex = rows.findIndex((r, i) => i > headerRowIndex && r[0] && String(r[0]).includes('機台名稱'));
-            const typeRowIndex = rows.findIndex((r, i) => i > headerRowIndex && r[0] && String(r[0]).includes('機台類型'));
-
-            const extractedMachines = [];
-            for (let c = 1; c < colCount; c++) {
-                const id = headerRow[c];
-                if (!id) continue;
-                let name = id;
-                if (nameRowIndex !== -1 && rows[nameRowIndex][c]) name = rows[nameRowIndex][c];
-                let series = 'Other';
-                if (typeRowIndex !== -1 && rows[typeRowIndex][c]) {
-                    series = String(rows[typeRowIndex][c]).trim();
-                } else {
-                    const combined = String(id) + String(name);
-                    if (combined.includes('Alpha')) series = 'Alpha';
-                    else if (combined.includes('Simple') || combined.includes('簡易')) series = 'Simple';
-                    else if (combined.includes('Beta')) series = 'Beta';
-                }
-                extractedMachines.push({ id: String(id), name: String(name), series, colIndex: c });
-            }
-
-            // 2. Extract Sections & Rows
-            const extractedSections = [];
-            let currentSection = { title: '基本規格', rows: [] };
-
-            for (let r = headerRowIndex + 1; r < rows.length; r++) {
-                const rowData = rows[r];
-                let key = rowData ? (rowData[0] ? String(rowData[0]).trim() : "") : "";
-                if (!key) continue;
-
-                // Skip metadata rows we handled
-                if (key.includes('機台名稱') || key.includes('機台編號') || key.includes('機台類型')) continue;
-
-                let isImportant = false;
-                if (key.startsWith('*')) {
-                    isImportant = true;
-                    key = key.substring(1).trim();
-                }
-
-                // Collect Values
-                let isRowEmpty = true;
-                const values = {};
-                extractedMachines.forEach(m => {
-                    const val = rowData[m.colIndex];
-                    if (val !== undefined && val !== null && String(val).trim() !== '') {
-                        isRowEmpty = false;
-                    }
-                    values[m.id] = val;
+            // --- 計算每台機台的風險統計 ---
+            const machineRiskStats = useMemo(() => {
+                const stats = {};
+                machines.forEach(m => {
+                    stats[m.id] = { critical: 0, warning: 0, info: 0 };
                 });
+                sections.forEach(section => {
+                    section.rows.forEach(row => {
+                        machines.forEach(m => {
+                            const text = row.values[m.id];
+                            if (text && String(text).trim() !== '') {
+                                // 分割多行內容，每行獨立計算
+                                const lines = String(text).split(/\n|\r|\d+\.\s+/).filter(line => line.trim().length > 0);
+                                lines.forEach(line => {
+                                    const { level } = analyzeRisk(line);
+                                    if (level === 'critical') stats[m.id].critical++;
+                                    else if (level === 'warning') stats[m.id].warning++;
+                                });
+                            }
+                        });
+                    });
+                });
+                return stats;
+            }, [machines, sections]);
 
-                // Determine if Section Header
-                // Definition: Key exists, but All Values Empty.
-                // Special case: if isRowEmpty is true, we treat it as section header.
-                if (isRowEmpty) {
-                    // Push old section if it has rows
-                    if (currentSection.rows.length > 0) {
-                        extractedSections.push(currentSection);
-                    }
-                    // Start new section
-                    currentSection = { title: key, rows: [] };
-                } else {
-                    currentSection.rows.push({ key, values, isImportant });
-                }
-            }
-            // Push last section
-            if (currentSection.rows.length > 0) {
-                extractedSections.push(currentSection);
-            }
-
-            setMachines(extractedMachines);
-            setSections(extractedSections);
-
-            if (extractedMachines.length >= 2) {
-                setCompareA(extractedMachines[0].id);
-                setCompareB(extractedMachines[1].id);
-            }
-        };
-
-        const visibleMachines = selectedSeries === 'All' ? machines : machines.filter(m => m.series === selectedSeries);
-        const seriesList = ['All', ...new Set(machines.map(m => m.series))];
-
-        return (
-            <div className="min-h-screen bg-slate-50 pb-20 font-sans text-slate-900">
-                {/* Header */}
-                <div className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-                    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-200">
-                                <FileSpreadsheet className="text-white w-6 h-6" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-slate-800">機台規格與風險看板</h1>
-                                <p className="text-xs text-slate-400">v3.2 Advanced Edition</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <div className="bg-slate-100 p-1 rounded-lg flex text-sm font-medium">
-                                <button onClick={() => setActiveTab('heatmap')} className={`px-3 py-2 rounded-md transition-all flex items-center gap-2 ${activeTab === 'heatmap' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                                    <LayoutList size={16} /> 風險熱圖
-                                </button>
-                                <button onClick={() => setActiveTab('compare')} className={`px-3 py-2 rounded-md transition-all flex items-center gap-2 ${activeTab === 'compare' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                                    <Columns size={16} /> 差異比對
-                                </button>
-                            </div>
-
-                            <label className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors font-medium text-sm border border-blue-100">
-                                <Search size={16} />
-                                {fileName ? "更換檔案" : "匯入 Excel"}
-                                <input type="file" onChange={handleFileUpload} accept=".xlsx,.xls,.csv" className="hidden" />
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 mt-6 fade-in">
-
-                    {/* --- VIEW 1: Heatmap --- */}
-                    {activeTab === 'heatmap' && (
-                        <>
-                            {/* Controls */}
-                            <div className="mb-4 flex gap-4 items-center justify-between sticky top-20 z-40 bg-slate-50 py-2">
-                                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                                    <div className="flex items-center gap-1 text-slate-500 text-sm font-medium mr-2">
-                                        <Filter size={14} /> 系列:
-                                    </div>
-                                    {seriesList.map(series => (
-                                        <button key={series} onClick={() => setSelectedSeries(series)}
-                                            className={`px-3 py-1 text-sm rounded-full whitespace-nowrap transition-colors border ${selectedSeries === series ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
-                                            {series}
-                                        </button>
-                                    ))}
+            return (
+                <div className="min-h-screen bg-slate-50 pb-20 font-sans text-slate-900">
+                    {/* Header */}
+                    <div className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+                        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-200">
+                                    <FileSpreadsheet className="text-white w-6 h-6" />
                                 </div>
-                                <div className="flex gap-2 text-sm">
-                                    <button onClick={expandAll} className="px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-50">全部展開</button>
-                                    <button onClick={collapseAll} className="px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-50">全部收合</button>
+                                <div>
+                                    <h1 className="text-xl font-bold text-slate-800">機台規格與風險看板</h1>
+                                    <p className="text-xs text-slate-400">
+                                        {APP_VERSION} | 資料來源: {fileName || DATA_SOURCE} ({DATA_UPDATE_DATE})
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[calc(100vh-180px)]">
-                                <div className="overflow-auto custom-scrollbar h-full relative">
-                                    <table className="w-full text-left border-collapse min-w-max">
-                                        <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold sticky top-0 z-[60] shadow-sm">
-                                            <tr>
-                                                <th className="p-4 bg-slate-50 border-r border-slate-200 sticky left-0 top-0 z-[70] min-w-[240px] sticky-col-shadow">
-                                                    規格項目
-                                                </th>
-                                                {visibleMachines.map(m => (
-                                                    <th key={m.id} className="p-4 min-w-[260px] border-r border-slate-100 bg-slate-50">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-slate-800 text-base font-bold">{m.name}</span>
-                                                            <span className="text-[10px] text-slate-400 font-mono mt-0.5">{m.id}</span>
-                                                            <span className={`mt-1 inline-flex w-fit px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${m.series === 'Alpha' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                                {m.series}
-                                                            </span>
-                                                        </div>
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {sections.map((section, sIdx) => {
-                                                const isCollapsed = collapsedSections.has(section.title);
-                                                return (
-                                                    <Fragment key={sIdx}>
-                                                        {/* Section Header */}
-                                                        <tr
-                                                            onClick={() => toggleSection(section.title)}
-                                                            className="bg-slate-100/80 hover:bg-slate-200/80 cursor-pointer transition-colors sticky top-[73px] z-[50] group"
-                                                        >
-                                                            <td colSpan={visibleMachines.length + 1} className="p-2 border-y border-slate-200">
-                                                                <div className="flex items-center gap-2 px-2 font-bold text-slate-700">
-                                                                    {isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
-                                                                    {section.title}
-                                                                    <span className="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-200 group-hover:border-slate-300">
-                                                                        {section.rows.length} 項目
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                        {/* Rows */}
-                                                        {!isCollapsed && section.rows.map((row, rIdx) => {
-                                                            const values = visibleMachines.map(m => String(row.values[m.id] || '').trim());
-                                                            const hasDiff = new Set(values).size > 1;
-
-                                                            return (
-                                                                <tr key={rIdx} className="hover:bg-blue-50/30 transition-colors group/row">
-                                                                    <td className="p-4 text-sm border-r border-slate-200 sticky left-0 z-30 align-top bg-white group-hover/row:bg-blue-50/10 sticky-col-shadow">
-                                                                        <div className="flex items-start justify-between font-medium text-slate-600">
-                                                                            <span>
-                                                                                {row.key}
-                                                                                {row.isImportant && <span className="ml-1 text-amber-500 text-xs align-top">★</span>}
-                                                                            </span>
-                                                                            {hasDiff && (
-                                                                                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5" title="有差異"></div>
-                                                                            )}
-                                                                        </div>
-                                                                    </td>
-                                                                    {visibleMachines.map(m => (
-                                                                        <td key={`${m.id}-${rIdx}`} className={`p-3 border-r border-slate-50 align-top ${hasDiff ? 'bg-amber-50/10' : ''}`}>
-                                                                            <RiskCard text={row.values[m.id]} />
-                                                                        </td>
-                                                                    ))}
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </Fragment>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    {/* --- VIEW 2: Comparison --- */}
-                    {activeTab === 'compare' && (
-                        <div className="space-y-6 pb-24">
-                            {/* Compare Controls */}
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-8 items-end justify-center sticky top-24 z-30">
-                                <div className="flex-1 w-full relative">
-                                    <div className="absolute -top-3 left-3 bg-white px-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Base Machine</div>
-                                    <select value={compareA} onChange={e => setCompareA(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
-                                        {machines.map(m => <option key={m.id} value={m.id}>{m.name} ({m.id})</option>)}
-                                    </select>
+                            <div className="flex items-center gap-3">
+                                <div className="bg-slate-100 p-1 rounded-lg flex text-sm font-medium">
+                                    <button onClick={() => setActiveTab('heatmap')} className={`px-3 py-2 rounded-md transition-all flex items-center gap-2 ${activeTab === 'heatmap' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                                        <LayoutList size={16} /> 風險熱圖
+                                    </button>
+                                    <button onClick={() => setActiveTab('compare')} className={`px-3 py-2 rounded-md transition-all flex items-center gap-2 ${activeTab === 'compare' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                                        <Columns size={16} /> 差異比對
+                                    </button>
                                 </div>
 
-                                <div className="bg-slate-100 rounded-full p-2 text-slate-400">
-                                    <Columns size={20} />
-                                </div>
-
-                                <div className="flex-1 w-full relative">
-                                    <div className="absolute -top-3 left-3 bg-white px-2 text-xs font-bold text-blue-500 uppercase tracking-wider">Comparison Target</div>
-                                    <select value={compareB} onChange={e => setCompareB(e.target.value)} className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-blue-900">
-                                        {machines.map(m => <option key={m.id} value={m.id}>{m.name} ({m.id})</option>)}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-center">
-                                <label className="flex items-center gap-3 cursor-pointer select-none bg-white px-5 py-2.5 rounded-full border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-                                    <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${diffOnly ? 'bg-blue-600' : 'bg-slate-200'}`}>
-                                        <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${diffOnly ? 'translate-x-4' : 'translate-x-0'}`} />
-                                    </div>
-                                    <span className="text-sm font-medium text-slate-700">只顯示差異項目 (Show Differences Only)</span>
-                                    <input type="checkbox" className="hidden" checked={diffOnly} onChange={e => setDiffOnly(e.target.checked)} />
+                                <label className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors font-medium text-sm border border-blue-100">
+                                    <Search size={16} />
+                                    {fileName ? "更換檔案" : "匯入 Excel"}
+                                    <input type="file" onChange={handleFileUpload} accept=".xlsx,.xls,.csv" className="hidden" />
                                 </label>
                             </div>
+                        </div>
+                    </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                {[compareA, compareB].map((id, idx) => {
-                                    const machine = machines.find(m => m.id === id);
-                                    if (!machine) return null;
-                                    const isBase = idx === 0;
-                                    const peerId = isBase ? compareB : compareA;
+                    <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 mt-6 fade-in">
 
-                                    const borderColor = isBase ? 'border-slate-200' : 'border-blue-200';
-                                    const checkColor = isBase ? 'bg-slate-50' : 'bg-blue-50';
+                        {/* --- VIEW 1: Heatmap --- */}
+                        {activeTab === 'heatmap' && (
+                            <>
+                                {/* Controls */}
+                                <div className="mb-4 flex gap-4 items-center justify-between sticky top-20 z-40 bg-slate-50 py-2">
+                                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                                        <div className="flex items-center gap-1 text-slate-500 text-sm font-medium mr-2">
+                                            <Filter size={14} /> 系列:
+                                        </div>
+                                        {seriesList.map(series => (
+                                            <button key={series} onClick={() => setSelectedSeries(series)}
+                                                className={`px-3 py-1 text-sm rounded-full whitespace-nowrap transition-colors border ${selectedSeries === series ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                                                {series}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2 text-sm">
+                                        <button onClick={expandAll} className="px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-50">全部展開</button>
+                                        <button onClick={collapseAll} className="px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-50">全部收合</button>
+                                    </div>
+                                </div>
 
-                                    return (
-                                        <div key={`${id}-${idx}`} className={`bg-white rounded-xl shadow-lg border ${borderColor} overflow-hidden flex flex-col`}>
-                                            <div className={`p-5 border-b ${isBase ? 'bg-slate-50 border-slate-100' : 'bg-blue-50 border-blue-100'} sticky top-0 z-20`}>
-                                                <h3 className="font-bold text-xl text-slate-800">{machine.name}</h3>
-                                                <div className="flex gap-2 mt-2">
-                                                    <span className="text-xs px-2 py-0.5 bg-white border rounded text-slate-500 font-mono">{machine.id}</span>
-                                                    <span className="text-xs px-2 py-0.5 bg-white border rounded text-slate-500">{machine.series}</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="divide-y divide-slate-50">
-                                                {sections.map(section => {
-                                                    // Filter rows in this section
-                                                    const visibleRows = section.rows.filter(r => {
-                                                        if (!diffOnly) return true;
-                                                        const val = String(r.values[id] || '').trim();
-                                                        const peerVal = String(r.values[peerId] || '').trim();
-                                                        return val !== peerVal;
-                                                    });
-
-                                                    if (visibleRows.length === 0) return null;
-
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[calc(100vh-180px)]">
+                                    <div className="overflow-auto custom-scrollbar h-full relative">
+                                        <table className="w-full text-left border-collapse min-w-max">
+                                            <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold sticky top-0 z-[60] shadow-sm">
+                                                <tr>
+                                                    <th className="p-4 bg-slate-50 border-r border-slate-200 sticky left-0 top-0 z-[70] min-w-[240px] sticky-col-shadow">
+                                                        規格項目
+                                                    </th>
+                                                    {visibleMachines.map(m => (
+                                                        <th key={m.id} className="p-4 min-w-[260px] border-r border-slate-100 bg-slate-50">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-slate-800 text-base font-bold">{m.name}</span>
+                                                                <span className="text-[10px] text-slate-400 font-mono mt-0.5">{m.id}</span>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <span className={`inline-flex w-fit px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${m.series === 'Alpha' ? 'bg-blue-100 text-blue-700' : m.series === 'Beta' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                                        {m.series}
+                                                                    </span>
+                                                                    {machineRiskStats[m.id] && (
+                                                                        <div className="flex gap-1.5 text-[10px] font-medium">
+                                                                            {machineRiskStats[m.id].critical > 0 && (
+                                                                                <span className="text-red-600" title="高風險項目">🔴 {machineRiskStats[m.id].critical}</span>
+                                                                            )}
+                                                                            {machineRiskStats[m.id].warning > 0 && (
+                                                                                <span className="text-amber-600" title="中風險項目">🟡 {machineRiskStats[m.id].warning}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {sections.map((section, sIdx) => {
+                                                    const isCollapsed = collapsedSections.has(section.title);
                                                     return (
-                                                        <div key={section.title}>
-                                                            <div className="bg-slate-50/50 px-5 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">{section.title}</div>
-                                                            {visibleRows.map(r => {
-                                                                const val = String(r.values[id] || '').trim();
-                                                                const peerVal = String(r.values[peerId] || '').trim();
-                                                                const isDiff = !isBase && val !== peerVal;
+                                                        <Fragment key={sIdx}>
+                                                            {/* Section Header */}
+                                                            <tr
+                                                                onClick={() => toggleSection(section.title)}
+                                                                className="bg-slate-100/80 hover:bg-slate-200/80 cursor-pointer transition-colors sticky top-[73px] z-[50] group"
+                                                            >
+                                                                <td colSpan={visibleMachines.length + 1} className="p-2 border-y border-slate-200">
+                                                                    <div className="flex items-center gap-2 px-2 font-bold text-slate-700">
+                                                                        {isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                                                                        {section.title}
+                                                                        <span className="text-xs font-normal text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-200 group-hover:border-slate-300">
+                                                                            {section.rows.length} 項目
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            {/* Rows */}
+                                                            {!isCollapsed && section.rows.map((row, rIdx) => {
+                                                                const values = visibleMachines.map(m => String(row.values[m.id] || '').trim());
+                                                                const hasDiff = new Set(values).size > 1;
 
                                                                 return (
-                                                                    <div key={r.key} className={`p-5 ${isDiff ? 'bg-amber-50/40' : ''}`}>
-                                                                        <div className="text-xs font-semibold text-slate-500 mb-2 flex justify-between items-center">
-                                                                            <span>{r.key} {r.isImportant && '★'}</span>
-                                                                            {isDiff && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">DIFF</span>}
-                                                                        </div>
-                                                                        <RiskCard text={r.values[id]} />
-                                                                    </div>
+                                                                    <tr key={rIdx} className="hover:bg-blue-50/30 transition-colors group/row">
+                                                                        <td className="p-4 text-sm border-r border-slate-200 sticky left-0 z-30 align-top bg-white group-hover/row:bg-blue-50/10 sticky-col-shadow">
+                                                                            <div className="flex items-start justify-between font-medium text-slate-600">
+                                                                                <span>
+                                                                                    {row.key}
+                                                                                    {row.isImportant && <span className="ml-1 text-amber-500 text-xs align-top">★</span>}
+                                                                                </span>
+                                                                                {hasDiff && (
+                                                                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5" title="有差異"></div>
+                                                                                )}
+                                                                            </div>
+                                                                        </td>
+                                                                        {visibleMachines.map(m => (
+                                                                            <td key={`${m.id}-${rIdx}`} className={`p-3 border-r border-slate-50 align-top ${hasDiff ? 'bg-amber-50/10' : ''}`}>
+                                                                                <RiskCard text={row.values[m.id]} />
+                                                                            </td>
+                                                                        ))}
+                                                                    </tr>
                                                                 );
                                                             })}
-                                                        </div>
+                                                        </Fragment>
                                                     );
                                                 })}
-                                                {diffOnly && sections.every(s => s.rows.every(r => String(r.values[id] || '').trim() === String(r.values[peerId] || '').trim())) && (
-                                                    <div className="p-10 text-center text-slate-400">
-                                                        <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                                                        <p>完全一致</p>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* --- VIEW 2: Comparison --- */}
+                        {activeTab === 'compare' && (
+                            <div className="space-y-6 pb-24">
+                                {/* Compare Controls */}
+                                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-8 items-end justify-center sticky top-24 z-30">
+                                    <div className="flex-1 w-full relative">
+                                        <div className="absolute -top-3 left-3 bg-white px-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Base Machine</div>
+                                        <select value={compareA} onChange={e => setCompareA(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                                            {machines.map(m => <option key={m.id} value={m.id}>{m.name} ({m.id})</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="bg-slate-100 rounded-full p-2 text-slate-400">
+                                        <Columns size={20} />
+                                    </div>
+
+                                    <div className="flex-1 w-full relative">
+                                        <div className="absolute -top-3 left-3 bg-white px-2 text-xs font-bold text-blue-500 uppercase tracking-wider">Comparison Target</div>
+                                        <select value={compareB} onChange={e => setCompareB(e.target.value)} className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-blue-900">
+                                            {machines.map(m => <option key={m.id} value={m.id}>{m.name} ({m.id})</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-center">
+                                    <label className="flex items-center gap-3 cursor-pointer select-none bg-white px-5 py-2.5 rounded-full border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
+                                        <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${diffOnly ? 'bg-blue-600' : 'bg-slate-200'}`}>
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${diffOnly ? 'translate-x-4' : 'translate-x-0'}`} />
                                         </div>
-                                    );
-                                })}
+                                        <span className="text-sm font-medium text-slate-700">只顯示差異項目 (Show Differences Only)</span>
+                                        <input type="checkbox" className="hidden" checked={diffOnly} onChange={e => setDiffOnly(e.target.checked)} />
+                                    </label>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {[compareA, compareB].map((id, idx) => {
+                                        const machine = machines.find(m => m.id === id);
+                                        if (!machine) return null;
+                                        const isBase = idx === 0;
+                                        const peerId = isBase ? compareB : compareA;
+
+                                        const borderColor = isBase ? 'border-slate-200' : 'border-blue-200';
+                                        const checkColor = isBase ? 'bg-slate-50' : 'bg-blue-50';
+
+                                        return (
+                                            <div key={`${id}-${idx}`} className={`bg-white rounded-xl shadow-lg border ${borderColor} overflow-hidden flex flex-col`}>
+                                                <div className={`p-5 border-b ${isBase ? 'bg-slate-50 border-slate-100' : 'bg-blue-50 border-blue-100'} sticky top-0 z-20`}>
+                                                    <h3 className="font-bold text-xl text-slate-800">{machine.name}</h3>
+                                                    <div className="flex gap-2 mt-2">
+                                                        <span className="text-xs px-2 py-0.5 bg-white border rounded text-slate-500 font-mono">{machine.id}</span>
+                                                        <span className="text-xs px-2 py-0.5 bg-white border rounded text-slate-500">{machine.series}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="divide-y divide-slate-50">
+                                                    {sections.map(section => {
+                                                        // Filter rows in this section
+                                                        const visibleRows = section.rows.filter(r => {
+                                                            if (!diffOnly) return true;
+                                                            const val = String(r.values[id] || '').trim();
+                                                            const peerVal = String(r.values[peerId] || '').trim();
+                                                            return val !== peerVal;
+                                                        });
+
+                                                        if (visibleRows.length === 0) return null;
+
+                                                        return (
+                                                            <div key={section.title}>
+                                                                <div className="bg-slate-50/50 px-5 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">{section.title}</div>
+                                                                {visibleRows.map(r => {
+                                                                    const val = String(r.values[id] || '').trim();
+                                                                    const peerVal = String(r.values[peerId] || '').trim();
+                                                                    const isDiff = !isBase && val !== peerVal;
+
+                                                                    return (
+                                                                        <div key={r.key} className={`p-5 ${isDiff ? 'bg-amber-50/40' : ''}`}>
+                                                                            <div className="text-xs font-semibold text-slate-500 mb-2 flex justify-between items-center">
+                                                                                <span>{r.key} {r.isImportant && '★'}</span>
+                                                                                {isDiff && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">DIFF</span>}
+                                                                            </div>
+                                                                            <RiskCard text={r.values[id]} />
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {diffOnly && sections.every(s => s.rows.every(r => String(r.values[id] || '').trim() === String(r.values[peerId] || '').trim())) && (
+                                                        <div className="p-10 text-center text-slate-400">
+                                                            <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                                                            <p>完全一致</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </main>
-            </div>
-        );
+                        )}
+                    </main>
+                </div>
+            );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
