@@ -372,16 +372,16 @@
                             <>
                                 {/* --- VIEW 1: Heatmap (Transposed) --- */}
                                 {activeTab === 'heatmap' && (
-                                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                                        <div className="overflow-x-auto custom-scrollbar">
+                                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-200px)]">
+                                        <div className="overflow-auto custom-scrollbar h-full">
                                             <table className="w-full text-left border-collapse min-w-max">
-                                                <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold sticky top-0 z-20 shadow-sm">
+                                                <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold sticky top-0 z-50 shadow-sm">
                                                     <tr>
-                                                        <th className="p-4 bg-slate-50 border-r border-slate-200 sticky left-0 z-30 min-w-[200px]">
+                                                        <th className="p-4 bg-slate-50 border-r border-slate-200 sticky left-0 top-0 z-50 min-w-[200px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                             規格項目 / 機台
                                                         </th>
                                                         {visibleMachines.map(m => (
-                                                            <th key={m.id} className="p-4 min-w-[220px] border-r border-slate-100">
+                                                            <th key={m.id} className="p-4 min-w-[220px] border-r border-slate-100 bg-slate-50 sticky top-0 z-40">
                                                                 <div className="flex flex-col">
                                                                     <span className="text-slate-800 text-base">{m.name}</span>
                                                                     <span className="text-[10px] text-slate-400 font-mono mt-0.5">{m.id}</span>
