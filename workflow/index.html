@@ -256,8 +256,8 @@
 
         const phases = [
             { id: 'P0', title: '需求輸入', sub: 'Input', owner: 'PM / Sales', goal: '收集需求案號，嚴禁直接開工設計。', outputs: ['URD 需求書', 'Project ID', 'Request Ticket'], gate: '確認是否有案號、是否有初步法規評估。' },
-            { id: 'P1', title: '需求定義', sub: 'Definition', owner: 'PM', goal: '把「想做什麼」轉化為「可被設計驗證」的規格。', outputs: ['SRS 規格書', '機台分類定義', 'Requirement Freeze 簽名'], gate: '關鍵：需求凍結。凍結後任何修改必須走 ECR 流程。' },
-            { id: 'P2', title: '系統架構', sub: 'Architecture', owner: 'System Architect', goal: '定義模組邊界與介面通訊協定，防範爆炸。', outputs: ['系統架構圖', '介面定義文件 (SW/EE/ME)', 'I/O Table初稿'], gate: '確認軟硬介面（Protocol/Pin）是否有明確定義？' },
+            { id: 'P1', title: '需求定義', sub: 'Definition', owner: 'PM', goal: '把「想做什麼」轉化為「可被設計驗證」的規格。', outputs: ['SRS 規格書', '機台分類定義', 'Requirement Freeze 簽名'], gate: '關鍵：需求凍結。凍結後任何修改必須走 ECR 流程。P1結束後: 其他會議若有提到可能的設計變更，需由RD針對特定機台提出ECR，並由PM召集相關人員召開會議評估可行性。' },
+            { id: 'P2', title: '系統架構', sub: 'Architecture', owner: 'System Architect', goal: '定義模組邊界與介面通訊協定，防範爆炸。', outputs: ['系統架構圖', '介面定義文件 (SW/EE/ME)', 'I/O Table初稿'], gate: '確認軟硬介面（Protocol/Pin）是否有明確定義？ RD提出確定且長交期物料請購需求。' },
             { id: 'P3', title: '模組設計', sub: 'Design', owner: 'RDs', goal: '各學門細部設計與工程出圖。進行 DR 審查。', outputs: ['3D/2D CAD', 'PCB Layout', 'Software Spec', 'PDR/CDR 報告'], gate: '是否通過 CDR (Critical Design Review)？' },
             { id: 'P4', title: '設計凍結', sub: 'Freeze', owner: 'PM / RD主管', goal: '鎖定規格，防止 RD 無休止修改導致物料失控。', outputs: ['Design Freeze 登錄單', 'BOM 版本底稿'], gate: '禁止任意修改尺寸與腳位。後續改圖需 ECR 評估。' },
             { id: 'P5', title: 'BOM 建立', sub: 'BOM', owner: 'ME / EE', goal: '建立標準產品結構。包含 Revision、供應商、AVL。', outputs: ['正式 E-BOM / M-BOM', '採購清單', '替代料對照表'], gate: 'BOM 是否已綁定版次與供應商？主管是否簽核 Freeze？' },
