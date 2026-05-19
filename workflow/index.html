@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>機台開發治理系統 (MDGS) 導航站</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8f9fa; color: #334155; }
+        .nav-active { border-bottom: 3px solid #b45309; color: #b45309; font-weight: 700; }
+        .glass-morphism { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .phase-step { cursor: pointer; transition: all 0.3s ease; }
+        .phase-step.active { background-color: #fef3c7; border-color: #d97706; transform: scale(1.05); }
+        .pill-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .raci-r { color: #1e40af; font-weight: bold; } /* Responsible */
+        .raci-a { color: #b91c1c; font-weight: bold; } /* Accountable */
+        .raci-c { color: #15803d; font-weight: bold; } /* Consulted */
+        .raci-i { color: #64748b; }             /* Informed */
+        tr:hover td { background-color: #fffbeb; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 glass-morphism shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-amber-800 tracking-wider">MDGS 治理系統</span>
+                </div>
+                <div class="hidden md:flex space-x-8 items-center">
+                    <a href="#vision" class="nav-link px-1 pt-1 text-sm font-medium border-b-2 border-transparent hover:text-amber-700 transition">治理思維</a>
+                    <a href="#identity" class="nav-link px-1 pt-1 text-sm font-medium border-b-2 border-transparent hover:text-amber-700 transition">機台分類</a>
+                    <a href="#lifecycle" class="nav-link px-1 pt-1 text-sm font-medium border-b-2 border-transparent hover:text-amber-700 transition">9大階段</a>
+                    <a href="#raci" class="nav-link px-1 pt-1 text-sm font-medium border-b-2 border-transparent hover:text-amber-700 transition">權責矩陣</a>
+                    <a href="#pillars" class="nav-link px-1 pt-1 text-sm font-medium border-b-2 border-transparent hover:text-amber-700 transition">五大支柱</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        
+        <!-- Header Section -->
+        <section id="vision" class="mb-16">
+            <div class="bg-white rounded-2xl p-8 pill-shadow mb-8">
+                <h1 class="text-3xl font-extrabold text-slate-900 mb-4">機台開發治理系統：從混亂到卓越</h1>
+                <p class="text-lg text-slate-600 leading-relaxed mb-6">
+                    解決需求未凍結、規格無單一來源、軟硬體脫鉤等核心痛點。我們導入「研發」與「產品」的**雙軌流程 (Dual-Track Flow)**，在實驗自由度與量產穩定性之間取得完美平衡。
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="border-l-4 border-blue-500 bg-blue-50 p-6 rounded-r-xl">
+                        <h3 class="text-blue-800 font-bold text-xl mb-2">研究流程 (Research Flow)</h3>
+                        <ul class="text-blue-700 space-y-1">
+                            <li>• 適用：DEV / Lab Machine</li>
+                            <li>• 特色：快、靈活修改、快速驗證</li>
+                            <li>• 控管：輕量化 ECR，快速迭代</li>
+                        </ul>
+                    </div>
+                    <div class="border-l-4 border-amber-500 bg-amber-50 p-6 rounded-r-xl">
+                        <h3 class="text-amber-800 font-bold text-xl mb-2">產品流程 (Product Flow)</h3>
+                        <ul class="text-amber-700 space-y-1">
+                            <li>• 適用：Platform / Customer Machine</li>
+                            <li>• 特色：Freeze、高度重現、可追溯性</li>
+                            <li>• 控管：嚴格階段閘門與 ECN 流程</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Machine Classification Section -->
+        <section id="identity" class="mb-16">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                <span class="bg-amber-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                機台身份與分類管理
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <div class="lg:col-span-1 bg-white p-6 rounded-2xl pill-shadow">
+                    <h3 class="text-lg font-bold mb-4 text-center">分類控管強度對比</h3>
+                    <div class="chart-container">
+                        <canvas id="typeChart"></canvas>
+                    </div>
+                    <p class="mt-4 text-sm text-slate-500 italic text-center">※ 不同類型機台需採用不同的 Release 與變更規則。</p>
+                </div>
+                <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4" id="machine-types">
+                    <!-- Cards will be populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 9-Phase Lifecycle Section -->
+        <section id="lifecycle" class="mb-16">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                <span class="bg-amber-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                九大開發階段互動導覽
+            </h2>
+            <div class="bg-white rounded-2xl p-8 pill-shadow">
+                <!-- Timeline Scroll -->
+                <div class="flex overflow-x-auto pb-6 space-x-4 mb-8" id="phase-timeline">
+                    <!-- Timeline items by JS -->
+                </div>
+
+                <!-- Phase Detail Panel -->
+                <div id="phase-detail" class="bg-slate-50 rounded-xl p-8 border border-slate-200 transition-all duration-500 opacity-100">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between mb-6">
+                        <div>
+                            <h3 id="detail-title" class="text-2xl font-bold text-amber-900">點擊上方階段查看詳情</h3>
+                            <span id="detail-phase" class="text-sm font-medium bg-amber-100 text-amber-800 px-3 py-1 rounded-full uppercase tracking-widest">PHASE N</span>
+                        </div>
+                        <div id="detail-owner" class="mt-4 md:mt-0 text-sm text-slate-600 font-medium"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="font-bold text-slate-800 mb-3 flex items-center">
+                                <span class="w-1.5 h-6 bg-blue-500 mr-2 rounded-full"></span> 核心目的與重點
+                            </h4>
+                            <p id="detail-goal" class="text-slate-600 mb-4"></p>
+                            <h4 class="font-bold text-slate-800 mb-3 flex items-center">
+                                <span class="w-1.5 h-6 bg-green-500 mr-2 rounded-full"></span> 主要產出件
+                            </h4>
+                            <ul id="detail-outputs" class="space-y-2 text-slate-700"></ul>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-inner border border-slate-100">
+                            <h4 class="font-bold text-slate-800 mb-3">關鍵管制閘門 (Gate Criteria)</h4>
+                            <div id="detail-gate" class="text-slate-600 text-sm leading-relaxed whitespace-pre-line"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RACI Matrix Section -->
+        <section id="raci" class="mb-16">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                <span class="bg-amber-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">3</span>
+                R&R 權責矩陣 (RACI Matrix)
+            </h2>
+            <div class="bg-white rounded-2xl p-6 pill-shadow overflow-hidden">
+                <div class="mb-6 flex flex-wrap gap-4 items-center justify-between">
+                    <p class="text-sm text-slate-500">
+                        R: 負責者 | A: 當責者 | C: 諮詢者 | I: 被通知者
+                    </p>
+                    <div class="flex items-center space-x-2">
+                        <label class="text-sm font-medium text-slate-700">依角色篩選:</label>
+                        <select id="role-filter" class="rounded-lg border-slate-300 text-sm focus:ring-amber-500 focus:border-amber-500">
+                            <option value="all">顯示全部角色</option>
+                            <option value="pm">專案經理 (PM)</option>
+                            <option value="rd_hw">硬體研發 (ME/EE)</option>
+                            <option value="rd_sw">軟韌體研發 (SW/FW)</option>
+                            <option value="qa">品質/生技 (QA/PE)</option>
+                            <option value="scm">採購/供應鏈 (SCM)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200" id="raci-table">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase">階段任務</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase role-col" data-role="pm">PM</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase role-col" data-role="rd_hw">ME/EE</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase role-col" data-role="rd_sw">SW/FW</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase role-col" data-role="scm">SCM</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase role-col" data-role="qa">QA/PE</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-100" id="raci-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Governance Pillars Section -->
+        <section id="pillars" class="mb-16">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                <span class="bg-amber-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">4</span>
+                治理五大支柱
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-8 rounded-2xl pill-shadow border-t-4 border-slate-700">
+                    <h3 class="font-bold text-xl mb-3">機台身份管理</h3>
+                    <p class="text-slate-600 text-sm">拒絕孤兒機台。所有實體機必須具備 Machine ID、金屬銘牌、與對應的 Config 狀態紀錄。</p>
+                </div>
+                <div class="bg-white p-8 rounded-2xl pill-shadow border-t-4 border-orange-500">
+                    <h3 class="font-bold text-xl mb-3">配置管理 (Config)</h3>
+                    <p class="text-slate-600 text-sm">禁止為單機 Fork 程式碼！透過 Config Table (JSON/XML) 讀取硬體特徵，由軟體主線自動載入對應模組。</p>
+                </div>
+                <div class="bg-white p-8 rounded-2xl pill-shadow border-t-4 border-blue-600">
+                    <h3 class="font-bold text-xl mb-3">單一真實來源 (SSOT)</h3>
+                    <p class="text-slate-600 text-sm">BOM 在 ERP/PLM、圖面在受控庫、程式在 Git Tag、需求在 Jira。嚴禁私人 Excel 傳遞。</p>
+                </div>
+                <div class="bg-white p-8 rounded-2xl pill-shadow border-t-4 border-red-500">
+                    <h3 class="font-bold text-xl mb-3">變更控制 (Change)</h3>
+                    <p class="text-slate-600 text-sm">設計凍結後，任何變更必須發起 ECR。評估影響、庫存損耗與重新驗證需求，核准後轉 ECN。</p>
+                </div>
+                <div class="bg-white p-8 rounded-2xl pill-shadow border-t-4 border-green-600">
+                    <h3 class="font-bold text-xl mb-3">平台化戰略</h3>
+                    <p class="text-slate-600 text-sm">走向「樂高式」模組化。核心平台保持標準化，客製化僅侷限於外接模組的置換，降低維護成本。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Roadmap -->
+        <section id="roadmap" class="mb-16">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                <span class="bg-amber-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">5</span>
+                落地實施路線圖
+            </h2>
+            <div class="relative py-8">
+                <div class="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-slate-200 hidden md:block"></div>
+                <div class="space-y-12">
+                    <div class="relative flex items-center justify-center md:justify-start">
+                        <div class="md:w-1/2 pr-0 md:pr-12 text-center md:text-right">
+                            <div class="bg-white p-6 rounded-2xl pill-shadow inline-block w-full">
+                                <span class="text-amber-600 font-bold">第一週：盤點</span>
+                                <h4 class="text-lg font-bold">機台分類與命名規則建立</h4>
+                                <p class="text-sm text-slate-500 mt-2">現有机台正名、貼標籤、建立唯一識別 ID。</p>
+                            </div>
+                        </div>
+                        <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-amber-600 border-4 border-white rounded-full hidden md:block"></div>
+                    </div>
+                    <div class="relative flex items-center justify-center md:justify-end">
+                        <div class="md:w-1/2 pl-0 md:pl-12 text-center md:text-left">
+                            <div class="bg-white p-6 rounded-2xl pill-shadow inline-block w-full">
+                                <span class="text-amber-600 font-bold">第二週：卡關</span>
+                                <h4 class="text-lg font-bold">需求凍結流程機制建立</h4>
+                                <p class="text-sm text-slate-500 mt-2">URS 與 SRS 審查會，不簽名不准開案。</p>
+                            </div>
+                        </div>
+                        <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-slate-400 border-4 border-white rounded-full hidden md:block"></div>
+                    </div>
+                    <div class="relative flex items-center justify-center md:justify-start">
+                        <div class="md:w-1/2 pr-0 md:pr-12 text-center md:text-right">
+                            <div class="bg-white p-6 rounded-2xl pill-shadow inline-block w-full">
+                                <span class="text-amber-600 font-bold">第四週：收斂</span>
+                                <h4 class="text-lg font-bold">ECR/ECN 流程正式啟動</h4>
+                                <p class="text-sm text-slate-500 mt-2">嚴禁私下改圖，一切變更走單號記錄。</p>
+                            </div>
+                        </div>
+                        <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-slate-400 border-4 border-white rounded-full hidden md:block"></div>
+                    </div>
+                    <div class="relative flex items-center justify-center md:justify-end">
+                        <div class="md:w-1/2 pl-0 md:pl-12 text-center md:text-left">
+                            <div class="bg-white p-6 rounded-2xl pill-shadow inline-block w-full">
+                                <span class="text-amber-600 font-bold">第六週：整合</span>
+                                <h4 class="text-lg font-bold">軟體 Config 管理機制導入</h4>
+                                <p class="text-sm text-slate-500 mt-2">收斂程式分叉，回歸單一主線。完成治理閉環。</p>
+                            </div>
+                        </div>
+                        <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-slate-400 border-4 border-white rounded-full hidden md:block"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <h2 class="text-2xl font-bold mb-4">開發自由度 vs 產品化管理</h2>
+            <p class="text-slate-400 max-w-2xl mx-auto text-sm leading-relaxed">
+                我們必須承認這兩者本質上是衝突的。唯有透過雙軌流程與嚴格的階段閘門，才能在保持研發速度的同時，確保產品的品質與可追溯性。
+            </p>
+            <div class="mt-8 pt-8 border-t border-slate-800 text-slate-500 text-xs">
+                © 2024 MDGS Machine Development Governance System | 生醫/客製化設備開發專用治理框架
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Data Definitions
+        const machineTypes = [
+            { id: 'PF', name: 'Platform Machine (標準平台)', desc: '公司核心平台，高通用性。', intensity: 95, color: '#1e40af', flow: 'Product Flow' },
+            { id: 'CM', name: 'Customer Machine (客製機)', desc: '基於標準平台進行模組化調整。', intensity: 80, color: '#0369a1', flow: 'Product Flow' },
+            { id: 'DEV', name: 'DEV Machine (開發驗證)', desc: '研發內部驗證新技術、新模組。', intensity: 40, color: '#d97706', flow: 'Research Flow' },
+            { id: 'DEMO', name: 'Demo Machine (展示機)', desc: '業務推廣、展會或客戶端短期展示。', intensity: 75, color: '#059669', flow: 'Product Flow' },
+            { id: 'LAB', name: 'Internal Lab (內部研究)', desc: '實驗室應用、配方等研究用機。', intensity: 20, color: '#64748b', flow: 'Research Flow' }
+        ];
+
+        const phases = [
+            { id: 'P0', title: '需求輸入', sub: 'Input', owner: 'PM / Sales', goal: '收集需求案號，嚴禁直接開工設計。', outputs: ['URD 需求書', 'Project ID', 'Request Ticket'], gate: '確認是否有案號、是否有初步法規評估。' },
+            { id: 'P1', title: '需求定義', sub: 'Definition', owner: 'PM', goal: '把「想做什麼」轉化為「可被設計驗證」的規格。', outputs: ['SRS 規格書', '機台分類定義', 'Requirement Freeze 簽名'], gate: '關鍵：需求凍結。凍結後任何修改必須走 ECR 流程。' },
+            { id: 'P2', title: '系統架構', sub: 'Architecture', owner: 'System Architect', goal: '定義模組邊界與介面通訊協定，防範爆炸。', outputs: ['系統架構圖', '介面定義文件 (SW/EE/ME)', 'I/O Table初稿'], gate: '確認軟硬介面（Protocol/Pin）是否有明確定義？' },
+            { id: 'P3', title: '模組設計', sub: 'Design', owner: 'RDs', goal: '各學門細部設計與工程出圖。進行 DR 審查。', outputs: ['3D/2D CAD', 'PCB Layout', 'Software Spec', 'PDR/CDR 報告'], gate: '是否通過 CDR (Critical Design Review)？' },
+            { id: 'P4', title: '設計凍結', sub: 'Freeze', owner: 'PM / RD主管', goal: '鎖定規格，防止 RD 無休止修改導致物料失控。', outputs: ['Design Freeze 登錄單', 'BOM 版本底稿'], gate: '禁止任意修改尺寸與腳位。後續改圖需 ECR 評估。' },
+            { id: 'P5', title: 'BOM 建立', sub: 'BOM', owner: 'ME / EE', goal: '建立標準產品結構。包含 Revision、供應商、AVL。', outputs: ['正式 E-BOM / M-BOM', '採購清單', '替代料對照表'], gate: 'BOM 是否已綁定版次與供應商？主管是否簽核 Freeze？' },
+            { id: 'P6', title: '採購與組裝', sub: 'Production', owner: 'SCM / PE', goal: '按凍結 BOM 採購。嚴禁拿草稿圖發包。', outputs: ['PO 訂單', '組裝 SOP', '物料交期追蹤表'], gate: '放行條件：Drawing 必須是 Released 版。' },
+            { id: 'P7', title: '整機驗證', sub: 'Verification', owner: 'QA', goal: '嚴格執行 EVT/DVT/PVT。包含可靠度、EMC 與安全性。', outputs: ['DVT 驗證報告', 'PVT 試產報告', 'Error Handling 測試表'], gate: '「Demo 成功」不等同於驗證。是否通過全功能 Stress Test？' },
+            { id: 'P8', title: '正式發行', sub: 'Release', owner: 'PM / QA', goal: '封裝交付包，進入變更控制階段。', outputs: ['Release Package', 'Git Tag', 'Calibration Spec'], gate: '所有修改一律走 ECR/ECN。' }
+        ];
+
+        const raciData = [
+            { task: 'P0.1 URD 需求收集與立案', pm: 'A', rd_hw: 'C', rd_sw: 'C', scm: 'I', qa: 'I' },
+            { task: 'P1.1 SRS 規格書制定與分類', pm: 'A', rd_hw: 'R', rd_sw: 'R', scm: 'I', qa: 'C' },
+            { task: 'P1.2 需求凍結 (Freeze)', pm: 'A', rd_hw: 'R', rd_sw: 'R', scm: 'I', qa: 'C' },
+            { task: 'P2.1 系統架構與介面定義', pm: 'C', rd_hw: 'A/R', rd_sw: 'A/R', scm: 'I', qa: 'I' },
+            { task: 'P3.1 模組設計與 PDR/CDR', pm: 'C', rd_hw: 'A/R', rd_sw: 'A/R', scm: 'I', qa: 'C' },
+            { task: 'P4.1 設計規格凍結 (Freeze)', pm: 'A', rd_hw: 'R', rd_sw: 'R', scm: 'I', qa: 'C' },
+            { task: 'P5.1 系統建 BOM 與發行', pm: 'I', rd_hw: 'A/R', rd_sw: 'R', scm: 'C', qa: 'C' },
+            { task: 'P6.1 發起 PR 與圖面釋出', pm: 'C', rd_hw: 'A/R', rd_sw: 'I', scm: 'I', qa: 'I' },
+            { task: 'P6.2 下達 PO 與交期控管', pm: 'I', rd_hw: 'C', rd_sw: 'I', scm: 'A/R', qa: 'I' },
+            { task: 'P7.1 EVT/DVT 驗證測試', pm: 'C', rd_hw: 'R', rd_sw: 'R', scm: 'I', qa: 'A/R' },
+            { task: 'P8.1 Release Package 歸檔', pm: 'A', rd_hw: 'R', rd_sw: 'R', scm: 'I', qa: 'R' },
+            { task: 'P8.2 變更控制 (ECR/ECN)', pm: 'C', rd_hw: 'R', rd_sw: 'R', scm: 'I', qa: 'A/R' }
+        ];
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            initTypeCards();
+            initRadarChart();
+            initPhaseTimeline();
+            initRaciTable();
+            initNavigation();
+            
+            // Set initial phase
+            updatePhaseDetail('P1');
+        });
+
+        // Machine Types
+        function initTypeCards() {
+            const container = document.getElementById('machine-types');
+            machineTypes.forEach(type => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-5 rounded-xl border border-slate-100 pill-shadow hover:border-amber-400 transition cursor-default';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">${type.id}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full ${type.flow === 'Product Flow' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}">${type.flow}</span>
+                    </div>
+                    <h4 class="font-bold text-slate-800 mb-1">${type.name}</h4>
+                    <p class="text-xs text-slate-500">${type.desc}</p>
+                    <div class="mt-4 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="h-full" style="width: ${type.intensity}%; background-color: ${type.color}"></div>
+                    </div>
+                    <span class="text-[10px] mt-1 block text-right text-slate-400 font-medium">控管強度: ${type.intensity}%</span>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Radar Chart
+        function initRadarChart() {
+            const ctx = document.getElementById('typeChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['標準化', '靈活性', '驗證嚴謹度', '變更控管', '重現性'],
+                    datasets: [
+                        {
+                            label: 'Platform (標準平台)',
+                            data: [100, 20, 100, 100, 100],
+                            borderColor: '#1e40af',
+                            backgroundColor: 'rgba(30, 64, 175, 0.1)',
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'DEV (開發驗證)',
+                            data: [30, 100, 50, 20, 40],
+                            borderColor: '#d97706',
+                            backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                            pointRadius: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: '#e2e8f0' },
+                            grid: { color: '#e2e8f0' },
+                            pointLabels: { font: { size: 10 } },
+                            ticks: { display: false, max: 100 }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        // Phase Timeline
+        function initPhaseTimeline() {
+            const container = document.getElementById('phase-timeline');
+            phases.forEach((phase, index) => {
+                const step = document.createElement('div');
+                step.className = `phase-step flex-shrink-0 w-32 h-24 border-2 border-slate-200 rounded-xl p-3 flex flex-col items-center justify-center text-center ${phase.id === 'P1' ? 'active' : ''}`;
+                step.dataset.id = phase.id;
+                step.innerHTML = `
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">${phase.id}</span>
+                    <div class="font-bold text-slate-800 text-sm leading-tight">${phase.title}</div>
+                    <span class="text-[9px] text-amber-600 font-medium">${phase.sub}</span>
+                `;
+                step.onclick = () => {
+                    document.querySelectorAll('.phase-step').forEach(s => s.classList.remove('active'));
+                    step.classList.add('active');
+                    updatePhaseDetail(phase.id);
+                };
+                container.appendChild(step);
+            });
+        }
+
+        function updatePhaseDetail(id) {
+            const phase = phases.find(p => p.id === id);
+            const panel = document.getElementById('phase-detail');
+            
+            panel.style.opacity = '0';
+            
+            setTimeout(() => {
+                document.getElementById('detail-title').innerText = phase.title;
+                document.getElementById('detail-phase').innerText = `${phase.id} — ${phase.sub}`;
+                document.getElementById('detail-owner').innerText = `💡 主責角色: ${phase.owner}`;
+                document.getElementById('detail-goal').innerText = phase.goal;
+                document.getElementById('detail-gate').innerText = phase.gate;
+                
+                const outputList = document.getElementById('detail-outputs');
+                outputList.innerHTML = '';
+                phase.outputs.forEach(out => {
+                    const li = document.createElement('li');
+                    li.className = 'flex items-center text-sm';
+                    li.innerHTML = `<span class="text-green-500 mr-2">✓</span> ${out}`;
+                    outputList.appendChild(li);
+                });
+                
+                panel.style.opacity = '1';
+            }, 300);
+        }
+
+        // RACI Matrix
+        function initRaciTable() {
+            const tbody = document.getElementById('raci-body');
+            raciData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-4 text-sm font-medium text-slate-700">${row.task}</td>
+                    <td class="px-4 py-4 text-center text-sm raci-cell" data-role="pm"><span class="${getRaciClass(row.pm)}">${row.pm}</span></td>
+                    <td class="px-4 py-4 text-center text-sm raci-cell" data-role="rd_hw"><span class="${getRaciClass(row.rd_hw)}">${row.rd_hw}</span></td>
+                    <td class="px-4 py-4 text-center text-sm raci-cell" data-role="rd_sw"><span class="${getRaciClass(row.rd_sw)}">${row.rd_sw}</span></td>
+                    <td class="px-4 py-4 text-center text-sm raci-cell" data-role="scm"><span class="${getRaciClass(row.scm)}">${row.scm}</span></td>
+                    <td class="px-4 py-4 text-center text-sm raci-cell" data-role="qa"><span class="${getRaciClass(row.qa)}">${row.qa}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('role-filter').addEventListener('change', (e) => {
+                const selectedRole = e.target.value;
+                const columns = document.querySelectorAll('.role-col');
+                const cells = document.querySelectorAll('.raci-cell');
+                
+                columns.forEach(col => {
+                    if (selectedRole === 'all' || col.dataset.role === selectedRole) {
+                        col.classList.remove('opacity-20');
+                    } else {
+                        col.classList.add('opacity-20');
+                    }
+                });
+
+                cells.forEach(cell => {
+                    if (selectedRole === 'all' || cell.dataset.role === selectedRole) {
+                        cell.classList.remove('bg-slate-50', 'opacity-20');
+                        if (selectedRole !== 'all') cell.classList.add('bg-amber-50');
+                    } else {
+                        cell.classList.add('opacity-20');
+                        cell.classList.remove('bg-amber-50');
+                    }
+                });
+            });
+        }
+
+        function getRaciClass(val) {
+            if (val.includes('A')) return 'raci-a';
+            if (val === 'R') return 'raci-r';
+            if (val === 'C') return 'raci-c';
+            if (val === 'I') return 'raci-i';
+            return '';
+        }
+
+        // Navigation Highlight
+        function initNavigation() {
+            const links = document.querySelectorAll('.nav-link');
+            window.addEventListener('scroll', () => {
+                let current = '';
+                const sections = ['vision', 'identity', 'lifecycle', 'raci', 'pillars'];
+                sections.forEach(s => {
+                    const el = document.getElementById(s);
+                    const rect = el.getBoundingClientRect();
+                    if (rect.top <= 100) current = s;
+                });
+                links.forEach(link => {
+                    link.classList.remove('nav-active');
+                    if (link.getAttribute('href') === `#${current}`) {
+                        link.classList.add('nav-active');
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>
