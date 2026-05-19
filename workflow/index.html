@@ -209,53 +209,23 @@
 
         <!-- Roadmap -->
         <section id="roadmap" class="mb-16">
-            <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4 flex items-center">
                 <span class="bg-amber-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">5</span>
-                落地實施路線圖
+                落地實施路線圖 (雙軌漸進式行動指南)
             </h2>
-            <div class="relative py-8">
-                <div class="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-slate-200 hidden md:block"></div>
-                <div class="space-y-12">
-                    <div class="relative flex items-center justify-center md:justify-start">
-                        <div class="md:w-1/2 pr-0 md:pr-12 text-center md:text-right">
-                            <div class="bg-white p-6 rounded-2xl pill-shadow inline-block w-full">
-                                <span class="text-amber-600 font-bold">第一週：盤點</span>
-                                <h4 class="text-lg font-bold">機台分類與命名規則建立</h4>
-                                <p class="text-sm text-slate-500 mt-2">現有机台正名、貼標籤、建立唯一識別 ID。</p>
-                            </div>
-                        </div>
-                        <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-amber-600 border-4 border-white rounded-full hidden md:block"></div>
-                    </div>
-                    <div class="relative flex items-center justify-center md:justify-end">
-                        <div class="md:w-1/2 pl-0 md:pl-12 text-center md:text-left">
-                            <div class="bg-white p-6 rounded-2xl pill-shadow inline-block w-full">
-                                <span class="text-amber-600 font-bold">第二週：卡關</span>
-                                <h4 class="text-lg font-bold">需求凍結流程機制建立</h4>
-                                <p class="text-sm text-slate-500 mt-2">URS 與 SRS 審查會，不簽名不准開案。</p>
-                            </div>
-                        </div>
-                        <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-slate-400 border-4 border-white rounded-full hidden md:block"></div>
-                    </div>
-                    <div class="relative flex items-center justify-center md:justify-start">
-                        <div class="md:w-1/2 pr-0 md:pr-12 text-center md:text-right">
-                            <div class="bg-white p-6 rounded-2xl pill-shadow inline-block w-full">
-                                <span class="text-amber-600 font-bold">第四週：收斂</span>
-                                <h4 class="text-lg font-bold">ECR/ECN 流程正式啟動</h4>
-                                <p class="text-sm text-slate-500 mt-2">嚴禁私下改圖，一切變更走單號記錄。</p>
-                            </div>
-                        </div>
-                        <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-slate-400 border-4 border-white rounded-full hidden md:block"></div>
-                    </div>
-                    <div class="relative flex items-center justify-center md:justify-end">
-                        <div class="md:w-1/2 pl-0 md:pl-12 text-center md:text-left">
-                            <div class="bg-white p-6 rounded-2xl pill-shadow inline-block w-full">
-                                <span class="text-amber-600 font-bold">第六週：整合</span>
-                                <h4 class="text-lg font-bold">軟體 Config 管理機制導入</h4>
-                                <p class="text-sm text-slate-500 mt-2">收斂程式分叉，回歸單一主線。完成治理閉環。</p>
-                            </div>
-                        </div>
-                        <div class="absolute left-1/2 transform -translate-x-1/2 w-6 h-6 bg-slate-400 border-4 border-white rounded-full hidden md:block"></div>
-                    </div>
+            <p class="text-slate-600 text-sm mb-8 -mt-2">
+                為避免流程一次到位造成團隊抗拒，我們為您設計了 8 週漸進式計劃。將「開發實驗自由度」與「生產紀律」分段導入。<strong>點擊左側時程卡片，右側可動態檢視詳細行動、交付文件與防卡關對策：</strong>
+            </p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <!-- Left Column: Interactive Timeline List -->
+                <div class="lg:col-span-5 space-y-4" id="roadmap-timeline">
+                    <!-- Populated by JS -->
+                </div>
+                
+                <!-- Right Column: Detail Display Panel -->
+                <div class="lg:col-span-7 bg-white p-8 rounded-2xl pill-shadow border border-slate-100 min-h-[450px] transition-all duration-300" id="roadmap-detail-panel">
+                    <!-- Content populated by JS -->
                 </div>
             </div>
         </section>
@@ -311,6 +281,104 @@
             { task: 'P8.2 變更控制 (ECR/ECN)', pm: 'C', rd_hw: 'R', rd_sw: 'R', scm: 'I', qa: 'A/R' }
         ];
 
+        const roadmapData = [
+            {
+                id: 'stage1',
+                period: '第 1 - 2 週',
+                title: '基礎盤點與實體正名',
+                focus: '機台分類、實體貼標、唯一身份建立，消滅「不知名孤兒機台」。',
+                actions: [
+                    '對全廠、研發實驗室與客戶端所有實體機台進行全面盤點，貼上唯一識別 ID 與實體銘牌。',
+                    '發行第一版《機台唯一身份識別 (Machine ID) 命名與標識規範 SOP》。',
+                    '建立 Master Machine Inventory Sheet，登記機台位置、管理人、搭載軟硬體版次。',
+                    '清理 Git 儲存庫，將歷史分叉代碼進行封裝，並打上與 Inventory 相符的 Tag（例：Release-CM-01-v1.0）。'
+                ],
+                deliverables: [
+                    '《全廠機台實體資產盤點清冊》',
+                    '《機台 Machine ID 命名與標識規範 SOP》',
+                    'Git 歷史專案標準 Tagging 紀錄'
+                ],
+                barriers: 'RD 習慣口頭稱呼機台暱稱（如「舊黃」）。對策：在 PLM/系統表單上卡關，不寫標準 ID 變更一律退件。',
+                tag: '物理正名',
+                color: 'border-blue-500 bg-blue-50 text-blue-800'
+            },
+            {
+                id: 'stage2',
+                period: '第 3 - 4 週',
+                title: '需求控制與閘門一 (Gate 1)',
+                focus: '建立 URD/SRS 規範與需求凍結會議，終結「設計與變更並行」之亂。',
+                actions: [
+                    '設計標準的 URD 與 SRS 簽核範本，規定關鍵規格必須具備「可量化」數值，拒絕模糊字眼。',
+                    '導入正式「Gate 1: Requirement Freeze」審查會議，不凍結不開案、不備料。',
+                    '在專案工具中，建立需求票券與 RD 設計任務的關聯性 (Traceability)。'
+                ],
+                deliverables: [
+                    '《URD & SRS 標準規格書範本》',
+                    '《需求凍結 (Gate 1) 審查檢核表與工作流》',
+                    'Jira 需求追蹤整合看板'
+                ],
+                barriers: 'PM 或客戶在凍結後口頭強塞追加功能。對策：實施「無變更單不開工」鐵律，要求提出 ECR 評估排程影響。',
+                tag: '需求凍結',
+                color: 'border-amber-500 bg-amber-50 text-amber-800'
+            },
+            {
+                id: 'stage3',
+                period: '第 5 - 6 週',
+                title: 'BOM 結構模組化與 ECR 流程',
+                focus: '重組 BOM 層級，嚴禁「無圖發包」，正式啟動變更控制。',
+                actions: [
+                    '重構現有扁平 Excel BOM，升級為多層級模組化 BOM (整機 -> 核心模組 -> 零件)。',
+                    '在 ERP/PLM 中強制綁定 Material Master 版次、核准供應商清單 (AVL) 與替代料。',
+                    '正式組建 CCB (工程變更審查委員會)，規定凍結後的改圖、改 pin 必須簽核 ECR 才能執行。'
+                ],
+                deliverables: [
+                    '《模組化分層 BOM 設計指引》',
+                    '《ECR/ECN 變更流程管理辦法》',
+                    '熱循環、電控模組等第一批標準化模組 BOM'
+                ],
+                barriers: 'RD 抱怨修改一顆螺絲也要填變更單拖慢速度。對策：設定輕微/重大變更分級，輕微變可走一階快速主管簽核。',
+                tag: '變更控制',
+                color: 'border-red-500 bg-red-50 text-red-800'
+            },
+            {
+                id: 'stage4',
+                period: '第 7 - 8 週',
+                title: '軟體配置管理與 DVT 驗證',
+                focus: '消除程式碼中的機型 if-else 硬編碼，標準化整機測試釋出包。',
+                actions: [
+                    '軟軟體主管引導代碼重構，導入 Config Table 載入機制，核心代碼回歸單一主幹 (Main Line)。',
+                    '標準化整機驗證與老化測試 (DVT/PVT) 項目，明訂 Error Handling 與異常恢復測試規範。',
+                    '設計「Release Package」簽放封裝規範，確保圖紙、BOM 與軟體 Git Tag 同步發布。'
+                ],
+                deliverables: [
+                    '《機台 Config Table 設定與配置規範》',
+                    '《整機 DVT/PVT 驗證檢核手冊》',
+                    '第一個完全基於 Config 切換的多機型主線軟韌體版本'
+                ],
+                barriers: '老舊機台包袱太重，不願重構。對策：老機採取漸進融入，新開案與重點客製機強制實施。',
+                tag: '軟硬閉環',
+                color: 'border-green-500 bg-green-50 text-green-800'
+            },
+            {
+                id: 'stage5',
+                period: '第 9 週+',
+                title: '持續治理與平台化推進',
+                focus: '定期流程遵循稽核，提升重複使用率，邁向樂高式平台化。',
+                actions: [
+                    '導入月度流程遵循稽核機制 (Governance Audit)，隨機抽查實體機台與系統 BOM 吻合度。',
+                    '提煉共享元件、通用電器主控板與標準結構件，納入「研發平台標準標準庫」。',
+                    '實施流程回饋會議，根據過去兩週遇到的卡關點，持續滾動微調治理框架。'
+                ],
+                deliverables: [
+                    '《治理稽核評估報告 (Governance Audit Report)》',
+                    '《共享核心模組與標準件資料庫》'
+                ],
+                barriers: '流程趨於形式化或偷跑。對策：將「規格一致性與 BOM 準確度」納入主管與工程師的關鍵績效考核。',
+                tag: '持續優化',
+                color: 'border-purple-500 bg-purple-50 text-purple-800'
+            }
+        ];
+
         // Initialization
         document.addEventListener('DOMContentLoaded', () => {
             initTypeCards();
@@ -318,9 +386,11 @@
             initPhaseTimeline();
             initRaciTable();
             initNavigation();
+            initInteractiveRoadmap(); // Set up new roadmap UI
             
-            // Set initial phase
+            // Set initial phase & roadmap stage
             updatePhaseDetail('P1');
+            updateRoadmapDetail('stage1');
         });
 
         // Machine Types
@@ -432,6 +502,105 @@
                 
                 panel.style.opacity = '1';
             }, 300);
+        }
+
+        function initInteractiveRoadmap() {
+            const container = document.getElementById('roadmap-timeline');
+            container.innerHTML = '';
+            
+            roadmapData.forEach((stage, idx) => {
+                const item = document.createElement('div');
+                item.className = `roadmap-card p-5 rounded-2xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-between ${idx === 0 ? 'bg-amber-50 border-amber-600 shadow-md' : 'bg-white border-slate-100 shadow-sm'}`;
+                item.dataset.id = stage.id;
+                
+                item.innerHTML = `
+                    <div class="flex-1 pr-4">
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${stage.color}">${stage.tag}</span>
+                            <span class="text-xs text-slate-400 font-semibold">${stage.period}</span>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-sm md:text-base">${stage.title}</h4>
+                        <p class="text-xs text-slate-500 mt-1 line-clamp-1">${stage.focus}</p>
+                    </div>
+                    <div class="text-slate-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                `;
+                
+                item.onclick = () => {
+                    document.querySelectorAll('.roadmap-card').forEach(c => {
+                        c.classList.remove('bg-amber-50', 'border-amber-600', 'shadow-md');
+                        c.classList.add('bg-white', 'border-slate-100', 'shadow-sm');
+                    });
+                    item.classList.remove('bg-white', 'border-slate-100', 'shadow-sm');
+                    item.classList.add('bg-amber-50', 'border-amber-600', 'shadow-md');
+                    updateRoadmapDetail(stage.id);
+                };
+                
+                container.appendChild(item);
+            });
+        }
+
+        function updateRoadmapDetail(id) {
+            const stage = roadmapData.find(s => s.id === id);
+            const panel = document.getElementById('roadmap-detail-panel');
+            
+            panel.style.opacity = '0';
+            panel.style.transform = 'translateY(5px)';
+            
+            setTimeout(() => {
+                panel.innerHTML = `
+                    <div class="border-b border-slate-100 pb-4 mb-6">
+                        <div class="flex items-center space-x-2 mb-2">
+                            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${stage.color}">${stage.tag}</span>
+                            <span class="text-xs font-semibold text-slate-400">${stage.period} 實施重點</span>
+                        </div>
+                        <h3 class="text-xl font-extrabold text-slate-900">${stage.title}</h3>
+                        <p class="text-sm text-slate-600 mt-2 italic">${stage.focus}</p>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-3 flex items-center">
+                                <span class="w-1.5 h-4 bg-amber-500 mr-2 rounded-full"></span> 關鍵行動步驟 (Action Items)
+                            </h4>
+                            <ul class="space-y-2.5 text-xs text-slate-700 pl-1">
+                                ${stage.actions.map(action => `
+                                    <li class="flex items-start">
+                                        <span class="text-amber-600 font-bold mr-2">•</span>
+                                        <span class="leading-relaxed">${action}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-3 flex items-center">
+                                <span class="w-1.5 h-4 bg-emerald-500 mr-2 rounded-full"></span> 關鍵交付件 (Deliverables)
+                            </h4>
+                            <ul class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-700">
+                                ${stage.deliverables.map(del => `
+                                    <li class="flex items-center bg-slate-50 border border-slate-100 p-2.5 rounded-lg">
+                                        <span class="text-emerald-500 mr-2">✓</span>
+                                        <span class="font-medium">${del}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-red-50 border border-red-100 rounded-xl p-4">
+                            <h4 class="font-bold text-red-800 text-xs mb-1.5 flex items-center">
+                                <span class="mr-1.5">⚠️</span> 阻力排除與防呆 (Risk Mitigation)
+                            </h4>
+                            <p class="text-xs text-red-700 leading-relaxed">${stage.barriers}</p>
+                        </div>
+                    </div>
+                `;
+                panel.style.opacity = '1';
+                panel.style.transform = 'translateY(0)';
+            }, 200);
         }
 
         // RACI Matrix
