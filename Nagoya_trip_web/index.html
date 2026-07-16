@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>名古屋・北陸精華5日旅遊攻略</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            light: '#fdfbf7', // 溫暖的紙張底色
+                            primary: '#e67a7a', // 日系櫻花紅
+                            secondary: '#6b8c74', // 抹茶綠
+                            accent: '#d4af37', // 點綴金
+                            dark: '#2c3e50' // 深灰藍
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* 隱藏捲軸但保留捲動功能 (給導覽列用) */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        /* 時間軸樣式 */
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            left: 1.25rem; /* 20px */
+            top: 2rem;
+            bottom: -1rem;
+            width: 2px;
+            background-color: #e5e7eb;
+            z-index: 0;
+        }
+        .timeline-item:last-child .timeline-line::before {
+            display: none;
+        }
+        /* 頁面切換平滑捲動 */
+        html {
+            scroll-behavior: smooth;
+        }
+        /* Toast 通知動畫 */
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-enter {
+            animation: slideUp 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased">
+
+    <!-- 模擬手機邊框容器 (在桌機上置中顯示) -->
+    <div class="max-w-md mx-auto bg-brand-light min-h-screen relative shadow-2xl overflow-hidden pb-20">
+
+        <!-- 頂部導覽列 (Sticky) -->
+        <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm">
+            <div class="px-4 py-3 flex items-center justify-between border-b border-gray-100">
+                <h1 class="text-lg font-bold text-brand-dark truncate">🇯🇵 名古屋北陸5日遊</h1>
+                <span class="text-xs bg-brand-primary text-white px-2 py-1 rounded-full font-medium">星宇航空</span>
+            </div>
+            <!-- 快速跳轉天數 -->
+            <nav class="flex overflow-x-auto no-scrollbar px-2 py-2 gap-2" id="nav-days">
+                <a href="#day1" class="nav-btn flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium bg-brand-primary text-white transition-colors">Day 1</a>
+                <a href="#day2" class="nav-btn flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-500 transition-colors">Day 2</a>
+                <a href="#day3" class="nav-btn flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-500 transition-colors">Day 3</a>
+                <a href="#day4" class="nav-btn flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-500 transition-colors">Day 4</a>
+                <a href="#day5" class="nav-btn flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-500 transition-colors">Day 5</a>
+                <a href="#info" class="nav-btn flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-500 transition-colors">須知</a>
+            </nav>
+        </header>
+
+        <!-- 主視覺橫幅 -->
+        <section class="relative h-48 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=1000');">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-black/20"></div>
+            <div class="absolute bottom-4 left-4 text-white">
+                <p class="text-sm font-medium text-brand-primary mb-1"><i class="fa-solid fa-calendar-days mr-1"></i> 2026/07/23 - 07/27</p>
+                <h2 class="text-2xl font-black tracking-wide leading-tight">樂高樂園、合掌村<br>秘境上高地5日</h2>
+            </div>
+        </section>
+
+        <!-- 內容區塊 -->
+        <main class="p-4 space-y-8">
+
+            <!-- Day 1 -->
+            <section id="day1" class="day-section scroll-mt-28">
+                <div class="flex items-end mb-4">
+                    <h3 class="text-2xl font-bold text-brand-dark">Day 1</h3>
+                    <span class="ml-2 text-sm text-gray-500 font-medium mb-1">07/23 (四) 啟程</span>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 relative timeline-item">
+                    <div class="timeline-line"></div>
+                    
+                    <!-- 集合 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                機場集合 (12:25)
+                                <a href="https://www.google.com/maps/search/?api=1&query=桃園國際機場第一航廈" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">桃園第一航廈 星宇航空團體櫃檯</p>
+                            <p class="text-xs text-gray-400 mt-1">領隊：楊宗憲</p>
+                        </div>
+                    </div>
+
+                    <!-- 航班 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-brand-dark text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-plane-departure"></i>
+                        </div>
+                        <div class="ml-4 pt-1">
+                            <h4 class="font-bold text-brand-dark">搭乘 JX838 前往名古屋</h4>
+                            <p class="text-sm text-gray-600 mt-1">14:55 TPE <i class="fa-solid fa-arrow-right mx-1 text-gray-400"></i> 18:45 NGO</p>
+                            <div class="mt-2 bg-gray-50 rounded-lg p-2 text-sm flex items-center">
+                                <i class="fa-solid fa-utensils text-brand-primary w-5 text-center"></i>
+                                <span class="ml-2 text-gray-700">午餐：機上精緻套餐</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 住宿 -->
+                    <div class="relative z-10 flex">
+                        <div class="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-bed"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow overflow-hidden">
+                            <h4 class="font-bold text-brand-dark">入住飯店 & 休息</h4>
+                            <p class="text-sm text-gray-600 mt-1 font-medium truncate">名古屋中部國際機場福朋喜來登酒店</p>
+                            <div class="flex items-center mt-2 gap-2">
+                                <p class="text-xs text-gray-500 truncate flex-grow">常滑市中部日本國際機場4-10-5</p>
+                                <a href="https://www.google.com/maps/search/?api=1&query=名古屋中部國際機場福朋喜來登酒店" target="_blank" class="flex-shrink-0 text-blue-600 text-xs border border-blue-200 bg-blue-50 rounded px-2 py-1 active:bg-blue-100 transition-colors flex items-center">
+                                    <i class="fa-solid fa-map-location-dot mr-1"></i> 地圖
+                                </a>
+                                <button onclick="copyText('常滑市中部日本國際機場4-10-5')" class="flex-shrink-0 text-brand-secondary text-xs border border-brand-secondary rounded px-2 py-1 active:bg-brand-secondary active:text-white transition-colors flex items-center">
+                                    <i class="fa-regular fa-copy mr-1"></i> 複製
+                                </button>
+                            </div>
+                            <div class="mt-3 bg-orange-50 rounded-lg p-2 text-sm flex items-center border border-orange-100">
+                                <i class="fa-solid fa-bowl-food text-orange-500 w-5 text-center"></i>
+                                <span class="ml-2 text-gray-700">晚餐：迎賓料理</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Day 2 -->
+            <section id="day2" class="day-section scroll-mt-28">
+                <div class="flex items-end mb-4">
+                    <h3 class="text-2xl font-bold text-brand-dark">Day 2</h3>
+                    <span class="ml-2 text-sm text-gray-500 font-medium mb-1">07/24 (五) 樂高樂園</span>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 relative timeline-item">
+                    <div class="timeline-line"></div>
+                    
+                    <!-- 景點1 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-yellow-400 text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-shapes"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                名古屋樂高樂園
+                                <a href="https://www.google.com/maps/search/?api=1&query=名古屋樂高樂園" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">亞洲第2座！22萬塊樂高打造的名古屋城、7大主題園區。</p>
+                        </div>
+                    </div>
+
+                    <!-- 景點2 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-blue-400 text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-fish-fins"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                海洋探索中心
+                                <a href="https://www.google.com/maps/search/?api=1&query=SEA+LIFE+Nagoya" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">體驗型水族館，在樂高環境中觀察海馬、魟魚、鯊魚。</p>
+                            <div class="mt-2 bg-gray-50 rounded-lg p-2 text-sm flex items-center">
+                                <i class="fa-solid fa-utensils text-gray-400 w-5 text-center"></i>
+                                <span class="ml-2 text-gray-700">午餐：方便遊玩，敬請自理</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 景點3 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-purple-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-bag-shopping"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                自由夜訪商圈
+                                <a href="https://www.google.com/maps/search/?api=1&query=名古屋榮町商圈" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">榮町 或 名古屋車站地下街購物尋寶。</p>
+                            <div class="mt-2 bg-gray-50 rounded-lg p-2 text-sm flex items-center">
+                                <i class="fa-solid fa-utensils text-gray-400 w-5 text-center"></i>
+                                <span class="ml-2 text-gray-700">晚餐：方便逛街，敬請自理</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 住宿 -->
+                    <div class="relative z-10 flex">
+                        <div class="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-bed"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow overflow-hidden">
+                            <h4 class="font-bold text-brand-dark">入住飯店</h4>
+                            <p class="text-sm text-gray-600 mt-1 font-medium truncate">名古屋榮Best Western Plus酒店</p>
+                            <div class="flex items-center mt-2 gap-2">
+                                <p class="text-xs text-gray-500 truncate flex-grow">愛知県名古屋市中区栄4丁目6-1</p>
+                                <a href="https://www.google.com/maps/search/?api=1&query=Best+Western+Plus+Nagoya+Sakae" target="_blank" class="flex-shrink-0 text-blue-600 text-xs border border-blue-200 bg-blue-50 rounded px-2 py-1 active:bg-blue-100 transition-colors flex items-center">
+                                    <i class="fa-solid fa-map-location-dot mr-1"></i> 地圖
+                                </a>
+                                <button onclick="copyText('愛知県名古屋市中区栄4丁目6-1')" class="flex-shrink-0 text-brand-secondary text-xs border border-brand-secondary rounded px-2 py-1 active:bg-brand-secondary active:text-white transition-colors flex items-center">
+                                    <i class="fa-regular fa-copy mr-1"></i> 複製
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Day 3 -->
+            <section id="day3" class="day-section scroll-mt-28">
+                <div class="flex items-end mb-4">
+                    <h3 class="text-2xl font-bold text-brand-dark">Day 3</h3>
+                    <span class="ml-2 text-sm text-gray-500 font-medium mb-1">07/25 (六) 峽谷與古道</span>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 relative timeline-item">
+                    <div class="timeline-line"></div>
+                    
+                    <!-- 景點1 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-cyan-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-ship"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                惠那峽遊船
+                                <a href="https://www.google.com/maps/search/?api=1&query=惠那峽遊船" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">搭乘噴射遊覽船，欣賞大自然侵蝕而成的斷崖絕壁。</p>
+                        </div>
+                    </div>
+
+                    <!-- 景點2 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-amber-700 text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-torii-gate"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                馬籠宿古道漫步
+                                <a href="https://www.google.com/maps/search/?api=1&query=馬籠宿" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">走進時光隧道，漫步江戶時代木造古風民家的石板坡道。</p>
+                            <div class="mt-2 bg-gray-50 rounded-lg p-2 text-sm flex items-center border border-gray-200">
+                                <i class="fa-solid fa-bowl-rice text-amber-700 w-5 text-center"></i>
+                                <span class="ml-2 text-gray-700">午餐：信州蕎麥御膳</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 景點3 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-brand-secondary text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-leaf"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                大王山葵農場
+                                <a href="https://www.google.com/maps/search/?api=1&query=大王山葵農場" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">黑澤明電影拍攝地。★特別贈送：WASABI山葵冰淇淋！</p>
+                        </div>
+                    </div>
+
+                    <!-- 住宿 -->
+                    <div class="relative z-10 flex">
+                        <div class="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-hot-tub-person"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow overflow-hidden">
+                            <h4 class="font-bold text-brand-dark">入住溫泉飯店</h4>
+                            <p class="text-sm text-gray-600 mt-1 font-medium truncate">安曇野穗高景觀飯店</p>
+                            <div class="flex items-center mt-2 gap-2">
+                                <p class="text-xs text-gray-500 truncate flex-grow">長野県安曇野市穂高牧2200-3</p>
+                                <a href="https://www.google.com/maps/search/?api=1&query=安曇野穗高景觀飯店" target="_blank" class="flex-shrink-0 text-blue-600 text-xs border border-blue-200 bg-blue-50 rounded px-2 py-1 active:bg-blue-100 transition-colors flex items-center">
+                                    <i class="fa-solid fa-map-location-dot mr-1"></i> 地圖
+                                </a>
+                                <button onclick="copyText('長野県安曇野市穂高牧2200-3')" class="flex-shrink-0 text-brand-secondary text-xs border border-brand-secondary rounded px-2 py-1 active:bg-brand-secondary active:text-white transition-colors flex items-center">
+                                    <i class="fa-regular fa-copy mr-1"></i> 複製
+                                </button>
+                            </div>
+                            <div class="mt-3 bg-orange-50 rounded-lg p-2 text-sm flex items-center border border-orange-100">
+                                <i class="fa-solid fa-utensils text-orange-500 w-5 text-center"></i>
+                                <span class="ml-2 text-gray-700">晚餐：飯店內溫泉會席料理</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Day 4 -->
+            <section id="day4" class="day-section scroll-mt-28">
+                <div class="flex items-end mb-4">
+                    <h3 class="text-2xl font-bold text-brand-dark">Day 4</h3>
+                    <span class="ml-2 text-sm text-gray-500 font-medium mb-1">07/26 (日) 秘境與古街</span>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 relative timeline-item">
+                    <div class="timeline-line"></div>
+                    
+                    <!-- 景點1 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-mountain-sun"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                上高地秘境 (神之故鄉)
+                                <a href="https://www.google.com/maps/search/?api=1&query=上高地河童橋" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">途經如鏡面的大正池，漫步至地標河童橋，眺望雄偉穗高連峰。</p>
+                        </div>
+                    </div>
+
+                    <!-- 景點2 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-rose-800 text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-shop"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                飛驒高山上三之町古街
+                                <a href="https://www.google.com/maps/search/?api=1&query=飛驒高山上三之町" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">米其林二星景點，飛驒小京都。推薦自費品嚐飛驒牛烤肉串。</p>
+                            <div class="mt-2 bg-red-50 rounded-lg p-2 text-sm flex items-center border border-red-100">
+                                <i class="fa-solid fa-fire-burner text-red-600 w-5 text-center"></i>
+                                <span class="ml-2 text-gray-700 font-medium">午餐：名物料理～飛驒牛御膳</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 住宿 -->
+                    <div class="relative z-10 flex">
+                        <div class="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-bed"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow overflow-hidden">
+                            <h4 class="font-bold text-brand-dark">入住飯店</h4>
+                            <p class="text-sm text-gray-600 mt-1 font-medium truncate">飛驒高山美居酒店 (Mercure)</p>
+                            <div class="flex items-center mt-2 gap-2">
+                                <p class="text-xs text-gray-500 truncate flex-grow">岐阜県高山市花里町4丁目311-1</p>
+                                <a href="https://www.google.com/maps/search/?api=1&query=Mercure+Hida+Takayama" target="_blank" class="flex-shrink-0 text-blue-600 text-xs border border-blue-200 bg-blue-50 rounded px-2 py-1 active:bg-blue-100 transition-colors flex items-center">
+                                    <i class="fa-solid fa-map-location-dot mr-1"></i> 地圖
+                                </a>
+                                <button onclick="copyText('岐阜県高山市花里町4丁目311-1')" class="flex-shrink-0 text-brand-secondary text-xs border border-brand-secondary rounded px-2 py-1 active:bg-brand-secondary active:text-white transition-colors flex items-center">
+                                    <i class="fa-regular fa-copy mr-1"></i> 複製
+                                </button>
+                            </div>
+                            <div class="mt-3 bg-orange-50 rounded-lg p-2 text-sm flex items-center border border-orange-100">
+                                <i class="fa-solid fa-utensils text-orange-500 w-5 text-center"></i>
+                                <span class="ml-2 text-gray-700">晚餐：高山地元料理</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Day 5 -->
+            <section id="day5" class="day-section scroll-mt-28">
+                <div class="flex items-end mb-4">
+                    <h3 class="text-2xl font-bold text-brand-dark">Day 5</h3>
+                    <span class="ml-2 text-sm text-gray-500 font-medium mb-1">07/27 (一) 童話與歸途</span>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 relative timeline-item">
+                    <div class="timeline-line"></div>
+                    
+                    <!-- 景點1 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-stone-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-house-chimney"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                白川鄉合掌村
+                                <a href="https://www.google.com/maps/search/?api=1&query=白川鄉合掌村" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">米其林三星、世界遺產！特別安排合掌造入內參觀。</p>
+                        </div>
+                    </div>
+
+                    <!-- 景點2 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-lime-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-horse-head"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                牧歌之里牧場
+                                <a href="https://www.google.com/maps/search/?api=1&query=牧歌之里牧場" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">搭乘遊園小火車賞花，近距離親近可愛的草泥馬(羊駝)。</p>
+                            <div class="mt-2 bg-gray-50 rounded-lg p-2 text-sm flex items-center border border-gray-200">
+                                <i class="fa-solid fa-utensils text-gray-500 w-5 text-center"></i>
+                                <span class="ml-2 text-gray-700">午餐：依行程安排 (牧場燒肉等)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 景點3 -->
+                    <div class="relative z-10 flex mb-6">
+                        <div class="w-10 h-10 rounded-full bg-pink-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-gift"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark">免稅購物商場</h4>
+                            <p class="text-sm text-gray-600 mt-1">返台前最後採購日本名產、伴手禮。</p>
+                        </div>
+                    </div>
+
+                    <!-- 航班 -->
+                    <div class="relative z-10 flex">
+                        <div class="w-10 h-10 rounded-full bg-brand-dark text-white flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white">
+                            <i class="fa-solid fa-plane-arrival"></i>
+                        </div>
+                        <div class="ml-4 pt-1 flex-grow">
+                            <h4 class="font-bold text-brand-dark flex items-center">
+                                搭乘 JX839 返回台北
+                                <a href="https://www.google.com/maps/search/?api=1&query=中部國際機場" target="_blank" class="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors shadow-sm"><i class="fa-solid fa-location-dot text-xs"></i></a>
+                            </h4>
+                            <p class="text-sm text-gray-600 mt-1">19:55 NGO <i class="fa-solid fa-arrow-right mx-1 text-gray-400"></i> 22:00 TPE</p>
+                            <div class="mt-2 bg-gray-50 rounded-lg p-2 text-sm flex items-center">
+                                <i class="fa-solid fa-utensils text-brand-primary w-5 text-center"></i>
+                                <span class="ml-2 text-gray-700">晚餐：機上餐食</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 旅遊須知區塊 -->
+            <section id="info" class="day-section scroll-mt-28 mb-8">
+                <div class="flex items-end mb-4">
+                    <h3 class="text-2xl font-bold text-brand-dark">📝 重要資訊</h3>
+                </div>
+                
+                <div class="bg-brand-dark text-white rounded-2xl shadow-sm p-5">
+                    <h4 class="font-bold text-brand-accent mb-3 border-b border-gray-600 pb-2"><i class="fa-solid fa-plane mr-2"></i>航班總覽 (星宇航空)</h4>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between items-center">
+                            <span>07/23 (去程) JX838</span>
+                            <span class="font-bold">14:55 - 18:45</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-300">
+                            <span>桃園(TPE) ➔ 名古屋(NGO)</span>
+                            <span>2h50m</span>
+                        </div>
+                        <hr class="border-gray-600 my-2">
+                        <div class="flex justify-between items-center">
+                            <span>07/27 (回程) JX839</span>
+                            <span class="font-bold">19:55 - 22:00</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-300">
+                            <span>名古屋(NGO) ➔ 桃園(TPE)</span>
+                            <span>3h05m</span>
+                        </div>
+                    </div>
+
+                    <h4 class="font-bold text-brand-accent mt-6 mb-3 border-b border-gray-600 pb-2"><i class="fa-solid fa-suitcase mr-2"></i>行前提醒</h4>
+                    <ul class="text-sm space-y-2 text-gray-200">
+                        <li><i class="fa-solid fa-check text-brand-secondary mr-2"></i>行李托運：1件，限重 23 公斤。</li>
+                        <li><i class="fa-solid fa-check text-brand-secondary mr-2"></i>小費：領隊導遊司機共 NT$300/天 (5天共 $1,500)。</li>
+                        <li><i class="fa-solid fa-check text-brand-secondary mr-2"></i>電池：行動電源與鋰電池<span class="text-red-400 font-bold">必須放隨身行李</span>，禁止托運。</li>
+                        <li><i class="fa-solid fa-check text-brand-secondary mr-2"></i>備品：部分飯店不提供拖鞋、牙刷膏，請自備。</li>
+                    </ul>
+                </div>
+            </section>
+            
+            <footer class="text-center text-gray-400 text-xs pb-6 pt-4">
+                <p>Have a nice trip to Japan!</p>
+            </footer>
+
+        </main>
+    </div>
+
+    <!-- 自訂 Toast 通知 -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium hidden z-50">
+        <i class="fa-solid fa-check-circle text-green-400 mr-2"></i>地址已複製到剪貼簿！
+    </div>
+
+    <script>
+        // 複製文字功能 (取代 alert)
+        function copyText(text) {
+            // 建立暫時的 textarea 來執行複製
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            try {
+                document.execCommand('copy');
+                showToast();
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            document.body.removeChild(el);
+        }
+
+        // 顯示 Toast 通知
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('hidden');
+            toast.classList.add('toast-enter');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('toast-enter');
+            }, 2000);
+        }
+
+        // ScrollSpy 功能：根據捲動位置更新上方導覽列顏色
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('.day-section');
+            const navLinks = document.querySelectorAll('.nav-btn');
+            const navContainer = document.getElementById('nav-days');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '-20% 0px -60% 0px', // 調整觸發區域在畫面上半部
+                threshold: 0
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.getAttribute('id');
+                        
+                        // 重置所有按鈕顏色
+                        navLinks.forEach(link => {
+                            link.classList.remove('bg-brand-primary', 'text-white');
+                            link.classList.add('bg-gray-100', 'text-gray-500');
+                            
+                            // 設定正在閱讀的區塊顏色
+                            if (link.getAttribute('href') === `#${id}`) {
+                                link.classList.remove('bg-gray-100', 'text-gray-500');
+                                link.classList.add('bg-brand-primary', 'text-white');
+                                
+                                // 讓導覽列自動水平捲動，使作用中的按鈕保持在視線內
+                                const scrollLeft = link.offsetLeft - (navContainer.clientWidth / 2) + (link.clientWidth / 2);
+                                navContainer.scrollTo({
+                                    left: scrollLeft,
+                                    behavior: 'smooth'
+                                });
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>

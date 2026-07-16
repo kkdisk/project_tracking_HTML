@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>九州冬日親子之旅 | 數位行前手冊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Winter (Stone, Rose, Sky) -->
+    <!-- Application Structure Plan:
+        1. Dashboard/Hero: Immediate trip details (Flight, Date) and a countdown to build excitement.
+        2. Trip DNA (Chart): Visualizing the balance of the trip (Nature, Fun, Relax) to reassure parents.
+        3. Interactive Itinerary: The core experience. A day-by-day view where parents can "unlock" stories and trivia to read to kids. This transforms the static text into an active parenting tool.
+        4. Smart Checklist: Interactive to-do list for packing, categorized for clarity.
+        5. Parent Tips: Accordion-style quick tips for on-the-go reference.
+        Reasoning: This structure moves from high-level excitement -> deep daily utility -> practical preparation.
+    -->
+    <!-- Visualization & Content Choices:
+        1. Trip Composition (Doughnut Chart): Shows the mix of 'Nature', 'Culture', 'Fun', 'Relax'. Goal: Inform parents of the balanced itinerary.
+        2. Temperature/Clothing Guide (Bar Chart): Visualizes the "Onion Style" layering logic against expected temps. Goal: Inform/Prepare.
+        3. Story/Trivia Cards: HTML/JS Toggle elements. Goal: Engagement/Relationships (Parent-Child bonding).
+        4. Progress Checklist: JS interactive list. Goal: Organize/Action.
+        CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .story-card { transition: all 0.3s ease; }
+        .story-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        /* Chart Container Styles - Mandatory */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px; /* Constrain width for readability */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 300px;
+        }
+        .checklist-item.checked span { text-decoration: line-through; color: #9ca3af; }
+    </style>
+</head>
+<body class="bg-stone-50 text-slate-800 antialiased selection:bg-rose-200 selection:text-rose-900">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur shadow-sm border-b border-stone-200">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="font-bold text-xl text-rose-600 tracking-tight">🇯🇵 九州冬日物語</div>
+                <div class="flex space-x-2 sm:space-x-4 text-sm font-medium">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-3 py-2 rounded-md hover:bg-stone-100 transition-colors text-rose-600">總覽</button>
+                    <button onclick="switchTab('itinerary')" id="nav-itinerary" class="px-3 py-2 rounded-md hover:bg-stone-100 transition-colors text-slate-600">每日行程</button>
+                    <button onclick="switchTab('checklist')" id="nav-checklist" class="px-3 py-2 rounded-md hover:bg-stone-100 transition-colors text-slate-600">準備清單</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- VIEW: DASHBOARD -->
+        <div id="view-dashboard" class="space-y-8 animate-fade-in">
+            
+            <!-- Hero Section -->
+            <div class="bg-gradient-to-br from-rose-50 to-orange-50 rounded-2xl p-6 sm:p-8 border border-rose-100 shadow-sm">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-slate-900 mb-2">James & Viola 全家福之旅</h1>
+                        <p class="text-slate-600">成員：Nina (9歲), Perry (7歲)</p>
+                    </div>
+                    <div class="bg-white px-4 py-2 rounded-lg shadow-sm border border-rose-100">
+                        <span class="text-xs font-bold text-rose-400 uppercase tracking-wider">出發日期</span>
+                        <div class="text-xl font-bold text-slate-800">2026/01/29</div>
+                    </div>
+                </div>
+                
+                <hr class="my-6 border-rose-200/50">
+
+                <!-- Flight Info Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-white p-4 rounded-xl border-l-4 border-sky-500 shadow-sm">
+                        <div class="flex justify-between mb-2">
+                            <span class="text-xs font-bold text-sky-600 bg-sky-50 px-2 py-1 rounded">去程 JX840</span>
+                            <span class="text-xs text-slate-400">星宇航空</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="text-center">
+                                <div class="text-lg font-bold">TPE</div>
+                                <div class="text-xs text-slate-500">台北</div>
+                            </div>
+                            <div class="text-sky-300 text-xl">✈️</div>
+                            <div class="text-center">
+                                <div class="text-lg font-bold">FUK</div>
+                                <div class="text-xs text-slate-500">福岡</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border-l-4 border-rose-500 shadow-sm">
+                        <div class="flex justify-between mb-2">
+                            <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded">回程 JX841</span>
+                            <span class="text-xs text-slate-400">星宇航空</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="text-center">
+                                <div class="text-lg font-bold">FUK</div>
+                                <div class="text-xs text-slate-500">福岡</div>
+                            </div>
+                            <div class="text-rose-300 text-xl">✈️</div>
+                            <div class="text-center">
+                                <div class="text-lg font-bold">TPE</div>
+                                <div class="text-xs text-slate-500">台北</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Intro Text -->
+            <div class="prose prose-stone max-w-none">
+                <p class="text-lg leading-relaxed text-slate-600">
+                    這是一份專為我們家設計的互動指南。此行程特別考量了 James 和 Viola 的放鬆需求（溫泉、鐵道）以及 Nina 和 Perry 的探索樂趣（動物園、玩雪）。透過下方的圖表，您可以快速了解這次旅程的豐富度。
+                </p>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Chart 1: Trip DNA -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2 border-b pb-2">🎯 行程組成分析</h3>
+                    <p class="text-sm text-slate-500 mb-4">這趟旅程如何平衡大人的放鬆與小孩的樂趣？</p>
+                    <div class="chart-container">
+                        <canvas id="tripMixChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Clothing/Temperature Logic -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2 border-b pb-2">❄️ 穿搭禦寒指數</h3>
+                    <p class="text-sm text-slate-500 mb-4">面對 0°C 的山區，我們需要「洋蔥式」防護。</p>
+                    <div class="chart-container">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Highlights Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="bg-stone-100 p-6 rounded-2xl">
+                    <h3 class="font-bold text-stone-800 mb-3 flex items-center gap-2">👨👩 給爸媽的享受</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-3">
+                            <span class="bg-white p-1 rounded shadow-sm text-lg">♨️</span>
+                            <span class="text-sm text-stone-600 pt-1">兩晚溫泉飯店，徹底消除疲勞。</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="bg-white p-1 rounded shadow-sm text-lg">🚂</span>
+                            <span class="text-sm text-stone-600 pt-1">南阿蘇鐵道，慢活欣賞火山美景。</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="bg-white p-1 rounded shadow-sm text-lg">🛍️</span>
+                            <span class="text-sm text-stone-600 pt-1">湯布院精緻雜貨與福岡購物。</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="bg-rose-50 p-6 rounded-2xl">
+                    <h3 class="font-bold text-rose-800 mb-3 flex items-center gap-2">👧👦 給寶貝的驚喜</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-3">
+                            <span class="bg-white p-1 rounded shadow-sm text-lg">🦁</span>
+                            <span class="text-sm text-rose-700 pt-1">叢林巴士餵獅子，超近距離接觸！</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="bg-white p-1 rounded shadow-sm text-lg">⛄</span>
+                            <span class="text-sm text-rose-700 pt-1">玩雪盆體驗，安全又刺激。</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="bg-white p-1 rounded shadow-sm text-lg">🤖</span>
+                            <span class="text-sm text-rose-700 pt-1">Lalaport 1:1 會動的鋼彈巨人。</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: ITINERARY -->
+        <div id="view-itinerary" class="hidden space-y-8 animate-fade-in">
+            <div class="prose prose-stone max-w-none mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">每日旅程與親子故事</h2>
+                <p class="text-slate-600">
+                    這裡不只是行程表，還包含了**「📖 說故事時間」**與**「🧐 冷知識挑戰」**。
+                    在遊覽車移動時，請點開每一天的卡片，把這些有趣的故事講給 Nina 和 Perry 聽，讓他們對下一個景點充滿期待！
+                </p>
+            </div>
+
+            <!-- Day Tabs -->
+            <div class="flex overflow-x-auto space-x-2 pb-2 mb-4 scrollbar-hide">
+                <button onclick="renderDay(1)" class="day-tab px-4 py-2 bg-white border border-stone-200 rounded-full text-sm font-bold whitespace-nowrap hover:bg-rose-50 active-day-btn" data-day="1">Day 1 啟程</button>
+                <button onclick="renderDay(2)" class="day-tab px-4 py-2 bg-white border border-stone-200 rounded-full text-sm font-medium whitespace-nowrap hover:bg-rose-50" data-day="2">Day 2 動物園</button>
+                <button onclick="renderDay(3)" class="day-tab px-4 py-2 bg-white border border-stone-200 rounded-full text-sm font-medium whitespace-nowrap hover:bg-rose-50" data-day="3">Day 3 玩雪</button>
+                <button onclick="renderDay(4)" class="day-tab px-4 py-2 bg-white border border-stone-200 rounded-full text-sm font-medium whitespace-nowrap hover:bg-rose-50" data-day="4">Day 4 鐵道</button>
+                <button onclick="renderDay(5)" class="day-tab px-4 py-2 bg-white border border-stone-200 rounded-full text-sm font-medium whitespace-nowrap hover:bg-rose-50" data-day="5">Day 5 鋼彈</button>
+            </div>
+
+            <!-- Dynamic Day Content -->
+            <div id="day-content" class="bg-white rounded-2xl shadow-lg border border-stone-100 overflow-hidden min-h-[400px]">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
+
+        <!-- VIEW: CHECKLIST -->
+        <div id="view-checklist" class="hidden space-y-6 animate-fade-in">
+            <div class="prose prose-stone max-w-none">
+                <h2 class="text-2xl font-bold text-slate-800">行前準備清單</h2>
+                <p class="text-slate-600">針對 1 月底九州山區氣候的特別清單。點擊項目即可標記為完成。</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Clothing -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-indigo-500">
+                    <h3 class="font-bold text-lg mb-4 flex items-center justify-between">
+                        <span>🧥 衣物與保暖</span>
+                        <span class="text-xs font-normal bg-indigo-50 text-indigo-600 px-2 py-1 rounded-full">關鍵</span>
+                    </h3>
+                    <div id="checklist-clothes" class="space-y-3"></div>
+                </div>
+
+                <!-- Kids Specific -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-rose-500">
+                    <h3 class="font-bold text-lg mb-4 flex items-center justify-between">
+                        <span>🧸 兒童專屬 (Nina & Perry)</span>
+                        <span class="text-xs font-normal bg-rose-50 text-rose-600 px-2 py-1 rounded-full">必備</span>
+                    </h3>
+                    <div id="checklist-kids" class="space-y-3"></div>
+                </div>
+
+                <!-- Tech & Docs -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-emerald-500">
+                    <h3 class="font-bold text-lg mb-4">📱 網路與證件</h3>
+                    <div id="checklist-tech" class="space-y-3"></div>
+                </div>
+
+                <!-- Money & Misc -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-amber-500">
+                    <h3 class="font-bold text-lg mb-4">💰 金錢與雜項</h3>
+                    <div id="checklist-misc" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- Parent Tips Accordion -->
+            <div class="bg-stone-100 rounded-2xl p-6 mt-8">
+                <h3 class="text-xl font-bold text-stone-800 mb-4">💡 給爸媽的小撇步 (Tips)</h3>
+                <div class="space-y-2" id="tips-container">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-stone-100 border-t border-stone-200 mt-12 py-8">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <p class="text-stone-500 text-sm">Wish James, Viola, Nina & Perry a wonderful trip!</p>
+            <p class="text-stone-400 text-xs mt-2">© 2026 Family Trip Guide</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- DATA STORE ---
+        const tripData = {
+            days: [
+                {
+                    id: 1,
+                    title: "飛往拉麵的故鄉",
+                    route: "台北 (TPE) ✈️ 福岡 (FUK) → 飯店",
+                    highlights: ["星宇航空舒適體驗", "抵達九州門戶福岡", "飯店放鬆準備明日探險"],
+                    storyTitle: "九州是什麼？",
+                    storyContent: "我們這次去的地方叫「九州」。為什麼叫九州呢？因為在很久很久以前，這裡真的被劃分成九個小國家喔！雖然現在名字改了，但大家還是習慣叫它九州。",
+                    triviaTitle: "便利商店尋寶挑戰",
+                    triviaContent: "今天的晚餐如果沒在飛機上吃飽，我們去便利商店找找看有沒有「熊本熊 (Kumamon)」圖案的零食或飲料，找到的人明天有獎勵！"
+                },
+                {
+                    id: 2,
+                    title: "叢林探險與童話小鎮",
+                    route: "九州自然動物園 → 湯布院 (Snoopy茶屋) → 金鱗湖 → 溫泉飯店",
+                    highlights: ["叢林巴士餵獅子", "Snoopy茶屋 & 龍貓店", "金鱗湖夢幻晨霧"],
+                    storyTitle: "誰被關在籠子裡？",
+                    storyContent: "一般動物園是動物被關著，我們在外面看。但今天我們要去的「九州自然動物園」很不一樣！我們會搭奇怪的「叢林巴士」，那其實是一個**移動的鐵籠子**。我們人類躲在籠子裡，獅子、老虎、大象在外面自由散步。對動物來說，我們才是被展覽的稀有動物呢！",
+                    triviaTitle: "金鱗湖為什麼會冒煙？",
+                    triviaContent: "仔細看金鱗湖，湖面常飄著白白的霧。這是因為湖底一半湧出**熱熱的溫泉**，一半湧出**冰冰的地下水**，冷熱碰在一起，就像洗澡水太熱會冒煙一樣，變成了夢幻的霧氣。"
+                },
+                {
+                    id: 3,
+                    title: "雪地冒險與巨人的飯碗",
+                    route: "九重森林公園玩雪盆 → 千羽鶴鹿公園 → 阿蘇米塚 → 草千里 → 採草莓",
+                    highlights: ["雪盆滑雪體驗", "樹雕藝術公園", "阿蘇火山奇景", "草莓吃到飽"],
+                    storyTitle: "巨人的飯碗 (米塚)",
+                    storyContent: "等一下車子經過阿蘇山時，注意看窗外有一個綠色（冬天可能是黃色）的小山丘，形狀圓圓的，頭頂卻凹下去一塊，像不像一個**倒扣過來的飯碗**？傳說以前阿蘇這裡的神明非常好心，他把米堆成一座山，想要分給肚子餓的人民吃。神明用手在山頂抓了一大把米去發送，所以山頂就留下了一個凹洞。",
+                    triviaTitle: "採草莓大挑戰",
+                    triviaContent: "日本草莓很多品種。今天的任務是：找到一顆形狀最奇怪的草莓，或者最大顆的草莓，拍照給媽媽看再吃掉！記得，蒂頭那邊比較酸，尖尖那邊比較甜，所以要從蒂頭開始吃，最後才會留下甜甜的味道在嘴巴裡喔！"
+                },
+                {
+                    id: 4,
+                    title: "水的魔術與忍者城堡",
+                    route: "南阿蘇鐵道 → 高森湧水隧道 → 櫻之馬場 → 熊本城",
+                    highlights: ["觀光鐵道列車", "水珍珠魔術裝置", "日本三大名城熊本城"],
+                    storyTitle: "變成公園的隧道",
+                    storyContent: "這個隧道原本是要給火車走的，結果挖到一半，突然挖到了巨大的地下水脈，水嘩啦嘩啦流不停，根本沒辦法蓋鐵路，只好放棄了。但是因為這裡的水質太好了，後來就把這個失敗的隧道變成了公園。",
+                    triviaTitle: "為什麼牆壁是彎彎的？",
+                    triviaContent: "注意看熊本城下面的石牆（武者返），下面斜斜的好像很好爬，但越上面越垂直！這是為了讓忍者或壞人爬到一半就會滑下來，沒辦法攻進去。"
+                },
+                {
+                    id: 5,
+                    title: "飛梅傳說與鋼彈巨人",
+                    route: "太宰府天滿宮 → Lalaport 鋼彈 → 機場 → 甜蜜的家",
+                    highlights: ["學問之神太宰府", "1:1 實體大鋼彈", "最後購物衝刺"],
+                    storyTitle: "會飛的梅花樹",
+                    storyContent: "這裡供奉著一位很會讀書的神明「菅原道真」。以前他在京都時，很喜歡家裡的一棵梅花樹。後來他搬到九州，那棵樹因為太想念主人，竟然**連夜從京都飛到了這裡**！這就是有名的「飛梅傳說」。",
+                    triviaTitle: "摸牛頭變聰明",
+                    triviaContent: "神社門口有一隻銅做的牛。傳說只要摸摸牛的頭，再摸摸自己的頭，就會得到智慧，讀書會變厲害喔！"
+                }
+            ],
+            checklist: {
+                clothes: [
+                    "發熱衣 (Heattech) x 3",
+                    "中層長袖 T-shirt/衛衣",
+                    "防風防潑水厚羽絨外套 (有帽)",
+                    "發熱褲 + 防風褲",
+                    "防水防滑鞋子/靴子",
+                    "防水手套 (玩雪必備，勿帶毛線)",
+                    "毛帽 & 圍巾",
+                    "墨鏡 (雪地防反光)"
+                ],
+                kids: [
+                    "替換用乾襪子 (隨身帶)",
+                    "耳罩式耳機 (飛機用)",
+                    "兒童暈車藥 (上車前30分吃)",
+                    "保濕乳液 & 護唇膏",
+                    "平板 (預載影片)",
+                    "小零食 (安撫用)"
+                ],
+                tech: [
+                    "網卡 / Wi-Fi 機",
+                    "Visit Japan Web QR Code (截圖)",
+                    "行動電源",
+                    "手機充電線"
+                ],
+                misc: [
+                    "日幣現金 (約3-5萬/人)",
+                    "高回饋信用卡 (吉鶴/熊本熊)",
+                    "大購物袋 (裝戰利品)",
+                    "常備藥品 (感冒/胃腸)"
+                ]
+            },
+            tips: [
+                { title: "溫泉禮儀 (給孩子)", content: "先洗乾淨身體再下水、毛巾放在頭上不可以泡進水裡、不可以在溫泉池游泳或潑水。" },
+                { title: "暈車對策", content: "Day 2-4 有山路。請務必準備兒童暈車藥，並儘量安排小孩坐前排看窗外。" },
+                { title: "便利商店美食", content: "孩子吃不慣團體餐？Lawson 的炸雞串 (Karaage-kun)、7-11 的飯糰和牛奶是救星。" }
+            ]
+        };
+
+        // --- APP STATE ---
+        let currentTab = 'dashboard';
+        let checklistState = JSON.parse(localStorage.getItem('kyushu_checklist')) || {};
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            renderDay(1);
+            renderChecklist();
+            renderTips();
+            switchTab('dashboard');
+        });
+
+        // --- NAVIGATION LOGIC ---
+        function switchTab(tabId) {
+            // Hide all views
+            ['dashboard', 'itinerary', 'checklist'].forEach(id => {
+                document.getElementById(`view-${id}`).classList.add('hidden');
+                document.getElementById(`nav-${id}`).classList.remove('bg-rose-50', 'text-rose-600', 'font-bold');
+                document.getElementById(`nav-${id}`).classList.add('text-slate-600');
+            });
+
+            // Show active view
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabId}`).classList.add('bg-rose-50', 'text-rose-600', 'font-bold');
+            document.getElementById(`nav-${tabId}`).classList.remove('text-slate-600');
+            
+            currentTab = tabId;
+            window.scrollTo(0, 0);
+        }
+
+        // --- RENDER FUNCTIONS ---
+        
+        function renderDay(dayId) {
+            const day = tripData.days.find(d => d.id === dayId);
+            const container = document.getElementById('day-content');
+            
+            // Update Tab Styles
+            document.querySelectorAll('.day-tab').forEach(btn => {
+                if(parseInt(btn.dataset.day) === dayId) {
+                    btn.classList.add('bg-rose-500', 'text-white', 'border-rose-500');
+                    btn.classList.remove('bg-white', 'text-slate-600', 'hover:bg-rose-50');
+                } else {
+                    btn.classList.remove('bg-rose-500', 'text-white', 'border-rose-500');
+                    btn.classList.add('bg-white', 'text-slate-600', 'hover:bg-rose-50');
+                }
+            });
+
+            // Inject Content
+            container.innerHTML = `
+                <div class="relative h-48 bg-stone-200 overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-r from-rose-500/80 to-indigo-500/80 mix-blend-multiply"></div>
+                    <div class="absolute bottom-0 left-0 p-6 text-white">
+                        <div class="text-xs font-bold uppercase tracking-wider mb-1 opacity-80">Day ${day.id}</div>
+                        <h2 class="text-3xl font-bold">${day.title}</h2>
+                    </div>
+                    <!-- Decorative Icon Background -->
+                    <div class="absolute top-4 right-4 text-9xl opacity-10 text-white">🇯🇵</div>
+                </div>
+
+                <div class="p-6 sm:p-8 space-y-8">
+                    <!-- Route -->
+                    <div class="bg-stone-50 p-4 rounded-xl border border-stone-200">
+                        <div class="text-xs font-bold text-stone-400 uppercase tracking-wide mb-2">本日路線</div>
+                        <div class="text-lg font-medium text-slate-800 flex items-center gap-2">
+                            🚌 ${day.route}
+                        </div>
+                    </div>
+
+                    <!-- Highlights -->
+                    <div>
+                        <h3 class="font-bold text-slate-800 mb-3">✨ 今日亮點</h3>
+                        <div class="flex flex-wrap gap-2">
+                            ${day.highlights.map(h => `<span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium border border-indigo-100">${h}</span>`).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Interactive Story Card -->
+                    <div class="story-card bg-amber-50 border border-amber-200 rounded-2xl p-6 relative overflow-hidden group cursor-pointer" onclick="toggleStory(this)">
+                        <div class="absolute top-0 right-0 p-4 opacity-20 text-6xl group-hover:scale-110 transition-transform">📖</div>
+                        <div class="relative z-10">
+                            <h3 class="text-amber-800 font-bold text-lg mb-2 flex items-center gap-2">
+                                <span>📖 說故事時間：${day.storyTitle}</span>
+                                <span class="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">點擊展開</span>
+                            </h3>
+                            <div class="story-body hidden mt-4 text-amber-900 leading-relaxed border-t border-amber-200/50 pt-4">
+                                ${day.storyContent}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trivia Card -->
+                    <div class="story-card bg-sky-50 border border-sky-200 rounded-2xl p-6 relative overflow-hidden group cursor-pointer" onclick="toggleStory(this)">
+                        <div class="absolute top-0 right-0 p-4 opacity-20 text-6xl group-hover:scale-110 transition-transform">🧐</div>
+                        <div class="relative z-10">
+                            <h3 class="text-sky-800 font-bold text-lg mb-2 flex items-center gap-2">
+                                <span>🧐 給小朋友的冷知識：${day.triviaTitle}</span>
+                                <span class="text-xs bg-sky-200 text-sky-900 px-2 py-0.5 rounded-full">點擊揭曉</span>
+                            </h3>
+                            <div class="story-body hidden mt-4 text-sky-900 leading-relaxed border-t border-sky-200/50 pt-4">
+                                ${day.triviaContent}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleStory(element) {
+            const body = element.querySelector('.story-body');
+            const hint = element.querySelector('span.text-xs');
+            
+            if (body.classList.contains('hidden')) {
+                body.classList.remove('hidden');
+                body.classList.add('animate-fade-in');
+                hint.textContent = '再次點擊收合';
+            } else {
+                body.classList.add('hidden');
+                hint.textContent = '點擊展開';
+            }
+        }
+
+        function renderChecklist() {
+            ['clothes', 'kids', 'tech', 'misc'].forEach(category => {
+                const container = document.getElementById(`checklist-${category}`);
+                container.innerHTML = tripData.checklist[category].map((item, index) => {
+                    const uniqueId = `${category}-${index}`;
+                    const isChecked = checklistState[uniqueId] ? 'checked' : '';
+                    return `
+                        <div class="checklist-item flex items-start gap-3 p-2 hover:bg-stone-50 rounded-lg cursor-pointer transition-colors ${isChecked}" onclick="toggleCheck('${uniqueId}', this)">
+                            <div class="mt-0.5 w-5 h-5 border-2 border-stone-300 rounded flex items-center justify-center flex-shrink-0 bg-white transition-colors">
+                                ${isChecked ? '<span class="text-emerald-500 font-bold">✓</span>' : ''}
+                            </div>
+                            <span class="text-sm sm:text-base text-slate-700 select-none transition-all">${item}</span>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+
+        function toggleCheck(id, element) {
+            const isChecked = !checklistState[id];
+            checklistState[id] = isChecked;
+            localStorage.setItem('kyushu_checklist', JSON.stringify(checklistState));
+            
+            // Visual Update
+            const box = element.querySelector('div');
+            if (isChecked) {
+                element.classList.add('checked');
+                box.innerHTML = '<span class="text-emerald-500 font-bold">✓</span>';
+            } else {
+                element.classList.remove('checked');
+                box.innerHTML = '';
+            }
+        }
+
+        function renderTips() {
+            const container = document.getElementById('tips-container');
+            container.innerHTML = tripData.tips.map((tip, idx) => `
+                <div class="border border-stone-200 rounded-lg bg-white overflow-hidden">
+                    <button class="w-full px-4 py-3 text-left font-medium text-slate-700 bg-stone-50 hover:bg-stone-100 flex justify-between items-center" onclick="toggleTip(${idx})">
+                        ${tip.title}
+                        <span id="tip-icon-${idx}" class="text-stone-400">▼</span>
+                    </button>
+                    <div id="tip-content-${idx}" class="hidden px-4 py-3 text-sm text-slate-600 border-t border-stone-100 leading-relaxed">
+                        ${tip.content}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleTip(idx) {
+            const content = document.getElementById(`tip-content-${idx}`);
+            const icon = document.getElementById(`tip-icon-${idx}`);
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                content.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function initCharts() {
+            // Chart 1: Trip Composition (Doughnut)
+            const ctx1 = document.getElementById('tripMixChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['自然 & 溫泉', '親子玩樂', '文化體驗', '美食 & 購物'],
+                    datasets: [{
+                        data: [35, 30, 20, 15],
+                        backgroundColor: ['#60a5fa', '#f43f5e', '#f59e0b', '#10b981'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
+                        tooltip: { 
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.parsed + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Chart 2: Temperature Logic (Bar/Line Combo idea simplified to Bar for "Layers")
+            // Concept: Show temperature vs Layers needed
+            const ctx2 = document.getElementById('tempChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['福岡市區 (5°C)', '由布院/阿蘇 (0°C)', '滑雪場 (-2°C)'],
+                    datasets: [
+                        {
+                            label: '內層 (發熱衣)',
+                            data: [1, 1, 1],
+                            backgroundColor: '#fca5a5', // Light red
+                            stack: 'Stack 0',
+                        },
+                        {
+                            label: '中層 (衛衣/毛衣)',
+                            data: [1, 1, 1],
+                            backgroundColor: '#93c5fd', // Light blue
+                            stack: 'Stack 0',
+                        },
+                        {
+                            label: '外層 (防風羽絨)',
+                            data: [0, 1, 1],
+                            backgroundColor: '#1e293b', // Dark
+                            stack: 'Stack 0',
+                        },
+                        {
+                            label: '必要配件 (圍巾/手套)',
+                            data: [0, 1, 2], // 2 means extra specific gear (waterproof gloves)
+                            backgroundColor: '#fbbf24', // Amber
+                            stack: 'Stack 0',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: { 
+                            stacked: true, 
+                            display: false,
+                            max: 6
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const labels = {
+                                        '內層 (發熱衣)': '貼身保暖',
+                                        '中層 (衛衣/毛衣)': '舒適保溫',
+                                        '外層 (防風羽絨)': '擋風抗寒',
+                                        '必要配件 (圍巾/手套)': context.raw > 1 ? '防水手套 + 圍巾' : '圍巾/毛帽'
+                                    };
+                                    if (context.raw === 0) return null;
+                                    return labels[context.dataset.label];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
